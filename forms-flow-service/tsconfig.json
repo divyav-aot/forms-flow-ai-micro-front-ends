@@ -3,7 +3,8 @@
   "files": ["src/formsflow-services.ts"],
   "compilerOptions": {
     "declaration": true,
-    "declarationDir": "dist"
+    "declarationDir": "dist",
+    "allowJs": true
   },
   "include": ["src/**/*"],
   "exclude": ["src/**/*.test*"]

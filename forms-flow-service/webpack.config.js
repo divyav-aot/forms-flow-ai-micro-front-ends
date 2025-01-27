@@ -19,5 +19,17 @@ module.exports = (webpackConfigEnv, argv) => {
     output:{
       filename:"forms-flow-service.js"
     },
+    module: {
+      rules: [
+        {
+          test: /\.scss$/,  // Match .scss files
+          use: [
+            "style-loader",  // Injects styles into the DOM
+            "css-loader",    // Resolves CSS imports and URLs
+            "sass-loader",   // Compiles SCSS to CSS
+          ],
+        },
+      ],
+    }
   });
 };
