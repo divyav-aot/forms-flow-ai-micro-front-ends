@@ -7,52 +7,42 @@ import { SVGprint } from "./svgPrint";
 
   
 class PrintServices {
-  renderSVGForm(values, componentSettings){
-    console.log("$$$$$$$$$$$$ this.data :"+JSON.stringify(values, null, 2));
-    console.log("$$$$$$$$$$$$ this.componentSettings:"+JSON.stringify(componentSettings, null, 2));
+  renderSVGForm(values, componentSettings) {
+    console.log("Component Settings:", JSON.stringify(componentSettings, null, 2));
+
     values = inputValues["values"];
-    let renderStage = componentSettings["stage"];
-    if(!renderStage){
-      renderStage = "stageOne";
-    }
+    let renderStage = componentSettings["stage"] || "stageOne";
+
+    // Detect if it's Preview Mode (e.g., if `id` or `defaultValue` is empty)
+    const isPreview = !componentSettings.id || componentSettings.defaultValue === null;
+
     const forms = {
       TwentyFourHour: values["TwentyFourHour"],
       TwelveHour: values["TwelveHour"],
-      // IRP: values["IRP"],
       VI: values["VI"],
     };
+
     const valuesCopy = { ...values };
     if (values["vehicle_impounded"] === "YES") {
       valuesCopy["date_released"] = null;
       valuesCopy["time_released"] = null;
-      // break;
     }
+
     const componentsToRender = [];
     for (const item in forms) {
       if (forms[item]) {
         for (const form in formsPNG[renderStage][item]) {
-          if (
-            form === "ILO" &&
-            values["VI"] &&
-            values["TwentyFourHour"] &&
-            item === "TwentyFourHour"
-          ) {
+          if (form === "ILO" && values["VI"] && values["TwentyFourHour"] && item === "TwentyFourHour") {
             break;
           }
           if (form === "ILO" && values["vehicle_impounded"] === "NO") {
             break;
           }
-          // if (form === "ILO" && values["vehicle_impounded"] === "YES") {
-          //   values['date_released']=null
-          //   values['time_released']=null
-          //   break;
-          // }
-
-          // We don't need an extra page if our incident details will fit on the first.
           if (form === "DETAILS" && values["incident_details"].length < 500) {
             break;
           }
-          const svg = 
+
+          const svg = (
             <SVGprint
               key={item + form}
               form={formsPNG[renderStage][item][form]["png"]}
@@ -62,20 +52,16 @@ class PrintServices {
               values={valuesCopy}
               impoundLotOperators={impoundAtom}
               renderStage={renderStage}
-            />;
+              isPreview={isPreview} // <-- Pass this flag to SVGprint
+            />
+          );
 
-          // Push the rendered HTML string (SVG content) to the componentsToRender array
           componentsToRender.push(svg);
-        }        
+        }
       }
     }
     return componentsToRender;
-  }    
+  }
 }
 
- 
-  
- //window.printServices = new PrintServices();
-  
-  export default PrintServices;
-  
+export default PrintServices;
