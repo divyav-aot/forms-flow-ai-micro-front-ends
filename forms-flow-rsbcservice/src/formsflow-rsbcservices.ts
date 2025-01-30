@@ -1,6 +1,7 @@
 // export all services here
 import { fetchAndSaveStaticData } from "./helpers/helperServices";
 import DBService from "./storage/dbService";
+import RSBCImage from "./print/RSBCImage";
 
 (async () => {
   try {
@@ -10,4 +11,4 @@ import DBService from "./storage/dbService";
   }
 })();
 
-export { DBService };
+export { DBService, RSBCImage };
