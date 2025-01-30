@@ -7,26 +7,36 @@ const settingsForm = (...extend) => {
         key: "display",
         components: [
           {
-            // You can ignore existing fields.
-            key: "placeholder",
-            ignore: true,
+            type: 'textfield',
+            key: 'label',
+            label: 'Label',
+            input: true,
+            weight: 10,
+          },
+          {
+            type: 'select',
+            key: 'stage',
+            label: 'RSBC Printing Stage',
+            input: true,
+            widget: 'choicesjs', // Ensure the dropdown displays as a simple select
+            dataSrc: 'values', // Use predefined values
+            data: {
+              values: [
+                { label: 'Stage One', value: 'stageOne' },
+                { label: 'Stage Two', value: 'stageTwo' },
+              ],
+            },
+            weight: 20,
+            defaultValue: 'stageOne', // Default to stageOne
+            placeholder: 'Select an RSBC Printing Stage', // Optional placeholder
+            multiple: false, // Ensure it's a single select dropdown
+            searchEnabled: false, // Disable the "type to search" input
           },
         ],
       },
       {
         key: "data",
-        components: [
-          {
-            // Or add your own. The syntax is form.io component definitions.
-            type: "tags",
-            storeas: "array",
-            input: true,
-            label: "Key topics for Sentiment Analysis",
-            weight: 20,
-            key: "sentimentAnalyticTopics", // This will be available as component.topic
-            tooltip: "Enter topics to use in sentiment Analysis",
-          },
-        ],
+        components: [ ],
       },
       {
         key: "validation",

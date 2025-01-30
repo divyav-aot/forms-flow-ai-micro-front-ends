@@ -25,7 +25,7 @@ export default class RSBCImage extends ReactComponent {
     });
   }
 
-  //static editForm = settingsForm;
+  static editForm = settingsForm;
 
   attachReact(element) {
     // Check if we're in builder mode
@@ -37,7 +37,7 @@ export default class RSBCImage extends ReactComponent {
     }
 
     // Get the array of <SVGPrint> components
-    const svgComponents = printServices.renderSVGForm("", "");
+    const svgComponents = printServices.renderSVGForm(this.data, this.component);
 
     // Map over the array and render each SVGPrint component inside a div
     return ReactDOM.render(
@@ -63,4 +63,4 @@ export default class RSBCImage extends ReactComponent {
 
 
 // Register the custom component in Form.io
-Components.addComponent('rsbcimage', RSBCImage);
+//Components.addComponent('rsbcimage', RSBCImage);

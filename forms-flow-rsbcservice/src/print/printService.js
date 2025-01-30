@@ -7,9 +7,14 @@ import { SVGprint } from "./svgPrint";
 
   
 class PrintServices {
-  renderSVGForm(values, renderStage){
+  renderSVGForm(values, componentSettings){
+    console.log("$$$$$$$$$$$$ this.data :"+JSON.stringify(values, null, 2));
+    console.log("$$$$$$$$$$$$ this.componentSettings:"+JSON.stringify(componentSettings, null, 2));
     values = inputValues["values"];
-    renderStage = inputValues["renderStage"];
+    let renderStage = componentSettings["stage"];
+    if(!renderStage){
+      renderStage = "stageOne";
+    }
     const forms = {
       TwentyFourHour: values["TwentyFourHour"],
       TwelveHour: values["TwelveHour"],
