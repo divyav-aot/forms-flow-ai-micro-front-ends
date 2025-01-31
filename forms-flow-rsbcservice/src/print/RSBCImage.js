@@ -36,8 +36,10 @@ export default class RSBCImage extends ReactComponent {
       throw new Error('printServices.renderSVGForm is not available.');
     }
 
+    const isEditMode = this.isPreviewPanelVisible();    
+
     // Get the array of <SVGPrint> components
-    const svgComponents = printServices.renderSVGForm(this.data, this.component);
+    const svgComponents = printServices.renderSVGForm(this.data, this.component, isEditMode, this.builderMode);
 
     // Map over the array and render each SVGPrint component inside a div
     return ReactDOM.render(
@@ -56,6 +58,22 @@ export default class RSBCImage extends ReactComponent {
   detachReact(element) {
     if (element) {
       ReactDOM.unmountComponentAtNode(element);
+    }
+  }
+
+  isPreviewPanelVisible(){
+    const previewPanel = document.querySelector('.card.panel.preview-panel');
+    if (previewPanel) {
+      const isVisible = previewPanel.offsetHeight > 0 && previewPanel.offsetWidth > 0;      
+      if (isVisible) {
+        console.log('Preview panel is visible!');
+      } else {
+        console.log('Preview panel is not visible.');
+      }
+      return isVisible;
+    } else {
+      console.log('Preview panel not found.');
+      return false;
     }
   }
 }

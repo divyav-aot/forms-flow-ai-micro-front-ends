@@ -1,20 +1,20 @@
 import React from "react";
 import ReactDOMServer from 'react-dom/server';
-import inputValues from "./renderData_VI_24Hour_StageOne.json";
 import impoundAtom from "./impoundLotOperators_VI_StageOne.json";
 import {  formsPNG } from "./helpers";
 import { SVGprint } from "./svgPrint";
+import inputValues from "./sampleData_VI_24Hour_StageTwo.json"
 
   
 class PrintServices {
-  renderSVGForm(values, componentSettings) {
-    console.log("Component Settings:", JSON.stringify(componentSettings, null, 2));
-
-    values = inputValues["values"];
+  renderSVGForm(values, componentSettings, isEditMode, builderMode) {    
+    values = inputValues;
     let renderStage = componentSettings["stage"] || "stageOne";
 
-    // Detect if it's Preview Mode (e.g., if `id` or `defaultValue` is empty)
-    const isPreview = !componentSettings.id || componentSettings.defaultValue === null;
+    let isPreview = isEditMode;
+    if(!isPreview && builderMode){
+      isPreview = true;
+    }    
 
     const forms = {
       TwentyFourHour: values["TwentyFourHour"],
@@ -52,7 +52,7 @@ class PrintServices {
               values={valuesCopy}
               impoundLotOperators={impoundAtom}
               renderStage={renderStage}
-              isPreview={isPreview} // <-- Pass this flag to SVGprint
+              isPreview={isPreview} 
             />
           );
 

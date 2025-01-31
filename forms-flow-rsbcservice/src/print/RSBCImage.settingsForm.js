@@ -27,10 +27,10 @@ const settingsForm = (...extend) => {
               ],
             },
             weight: 20,
-            defaultValue: 'stageOne', // Default to stageOne
-            placeholder: 'Select an RSBC Printing Stage', // Optional placeholder
-            multiple: false, // Ensure it's a single select dropdown
-            searchEnabled: false, // Disable the "type to search" input
+            defaultValue: 'stageOne', 
+            placeholder: 'Select an RSBC Printing Stage', 
+            multiple: false, 
+            searchEnabled: false, 
           },
         ],
       },
