@@ -18,8 +18,8 @@ const settingsForm = (...extend) => {
             key: 'stage',
             label: 'RSBC Printing Stage',
             input: true,
-            widget: 'choicesjs', // Ensure the dropdown displays as a simple select
-            dataSrc: 'values', // Use predefined values
+            widget: 'choicesjs', 
+            dataSrc: 'values', 
             data: {
               values: [
                 { label: 'Stage One', value: 'stageOne' },

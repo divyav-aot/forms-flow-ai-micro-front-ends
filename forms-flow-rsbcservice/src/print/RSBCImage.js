@@ -28,20 +28,17 @@ export default class RSBCImage extends ReactComponent {
   static editForm = settingsForm;
 
   attachReact(element) {
-    // Check if we're in builder mode
+    
     const printServices = new PrintServices();
   
-    // Ensure the printServices and renderSVGForm method are available
     if (!printServices || typeof printServices.renderSVGForm !== 'function') {
       throw new Error('printServices.renderSVGForm is not available.');
     }
 
     const isEditMode = this.isPreviewPanelVisible();    
 
-    // Get the array of <SVGPrint> components
     const svgComponents = printServices.renderSVGForm(this.data, this.component, isEditMode, this.builderMode);
 
-    // Map over the array and render each SVGPrint component inside a div
     return ReactDOM.render(
       <div className="rsbc-image-container">
         {svgComponents.map((svg, index) => (
@@ -78,7 +75,3 @@ export default class RSBCImage extends ReactComponent {
   }
 }
 
-
-
-// Register the custom component in Form.io
-//Components.addComponent('rsbcimage', RSBCImage);
