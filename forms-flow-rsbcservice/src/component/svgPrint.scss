@@ -32,7 +32,7 @@
   font-size: 7.5pt;
 }
 
-$font_path: ("./assets");
+$font_path: ("../assets");
 @font-face {
   font-family: "barcode";
   src: local("barcode"),

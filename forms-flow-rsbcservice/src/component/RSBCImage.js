@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from "react-dom";
 import { ReactComponent } from '@aot-technologies/formio-react';
 import { Components } from 'formiojs';
-import PrintServices from './printService';
+import PrintServices from '../print/printService';
 import settingsForm from "./RSBCImage.settingsForm";
 
 export default class RSBCImage extends ReactComponent {
@@ -21,7 +21,7 @@ export default class RSBCImage extends ReactComponent {
     return ReactComponent.schema({
       type: 'rsbcimage',
       label: 'RSBC Image',
-      key: 'rsbcImage',
+      key: 'rsbcImage', 
     });
   }
 

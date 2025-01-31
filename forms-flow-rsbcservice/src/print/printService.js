@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOMServer from 'react-dom/server';
-import impoundAtom from "./impoundLotOperators_VI_StageOne.json";
-import {  formsPNG } from "./helpers";
-import { SVGprint } from "./svgPrint";
-import inputValues from "./sampleData_VI_24Hour_StageTwo.json"
+import impoundAtom from "../component/impoundLotOperators_VI_StageOne.json";
+import {  formsPNG } from "../component/printHelperServices"; 
+import { SVGprint } from "../component/svgPrint";
+import inputValues from "../component/sampleData_VI_24Hour_StageTwo.json"
 
   
 class PrintServices {
