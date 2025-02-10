@@ -1,6 +1,5 @@
 import { db } from "./db";
 import { fetchStaticData } from "../request/staticDataApi";
-import { fetchFormList } from "../request/requestService";
 import { handleError } from "../helpers/helperServices";
 import { StaticResources, StaticTables, TableMetadataMapping } from "../constants/constants";
 
