@@ -1,10 +1,12 @@
 import { db } from "./db";
 import { fetchStaticData } from "../request/staticDataApi";
+import { fetchFormList } from "../request/requestService";
 import { handleError } from "../helpers/helperServices";
+import { StaticResources, StaticTables, TableMetadataMapping } from "../constants/constants";
 
 class DBService {
     
-  public static async saveToIndexedDB(resourceName: string, data: any) {
+  private static async saveToIndexedDB(resourceName: string, data: any) {
     try {
       // Check if IndexedDB is available
       if (!db) {
@@ -77,6 +79,40 @@ class DBService {
           await db.jurisdictionCountry.bulkPut(data);
           console.log("Jurisdiction Country data saved to IndexedDB.");
           break;
+        case "formList":
+          await db.formList.clear();
+          await db.formList.bulkPut(data.forms);
+          await db.formListMetaData.clear();
+          await db.formListMetaData.put({
+            key: "metadata",
+            totalCount: data.totalCount,
+            pageNo: data.pageNo,
+            limit: data.limit
+          })
+          console.log("Form List data saved to IndexedDB.");
+          break;
+        case "application":
+          await db.application.clear();
+          await db.application.bulkPut(data.applications);
+          await db.applicationMetaData.put({
+            key: "metadata",
+            draftCount: data.draftCount,
+            totalCount: data.totalCount,
+            pageNo: data.pageNo,
+            limit: data.limit
+          })
+          console.log("Applications data saved to IndexedDB.");
+          break;
+        case "draft":
+          await db.draft.clear();
+          await db.draft.bulkPut(data.drafts);
+          await db.draftMetaData.put({
+            key: "metadata",
+            applicationCount: data.applicationCount,
+            totalCount: data.totalCount,
+          })
+          console.log("Drafts data saved to IndexedDB.");
+          break;
         default:
           console.log(`No matching table found for resource: ${resourceName}`);
       }
@@ -90,24 +126,8 @@ class DBService {
       await db.open();
       console.log("Fetching and saving static data...");
 
-      const resources = [
-        "agencies",
-        "cities",
-        "countries",
-        "jurisdictions",
-        "impound_lot_operators",
-        "provinces",
-        "vehicle_styles",
-        "vehicle_types",
-        "vehicle_colours",
-        "vehicles",
-        "nsc_puj",
-        "jurisdiction_country",
-      ];
-      
-
       // Create an array of promises for fetching data
-      const fetchPromises = resources.map(async (resource) => {
+      const fetchPromises = StaticResources.map(async (resource) => {
         try {              
             await fetchStaticData(
               resource,
@@ -128,38 +148,71 @@ class DBService {
     }
   }
   
-
-  public static async fetchStaticDataFromTable(
-    tableName: string
-  ): Promise<any[]> {
+  public static async fetchStaticDataFromTable(tableName: string): Promise<any[]> {
     try {
-      // Ensure the database is open before performing any operations
+      if (!db) throw new Error("IndexedDB is not available.");
+      if (!StaticTables.includes(tableName)) throw new Error(`Table ${tableName} is not accessible.`);
+  
+      await db.open(); // Ensure the database is open
+  
+      const table = db[tableName];
+      if (!table) throw new Error(`Table ${tableName} not found in IndexedDB.`);
+  
+      const data = await table.toArray();
+      if (!data.length) console.warn(`No data found in table ${tableName}.`);
+  
+      return data;
+    } catch (error) {
+      console.error(`Error fetching data from table ${tableName}:`, error);
+      throw error;
+    }
+  }
+  
+  public static async insertFFData (resourceName: string, data: any): Promise<void> {
+    try {
+      await this.saveToIndexedDB(resourceName, data);         
+    } catch (error) {
+      console.error(`Error processing resource ${resourceName}:`, error);
+    }
+  }
+  
+  public static async fetchDataFromTable(tableName: string): Promise<any> {
+    try {
       if (!db) {
         throw new Error("IndexedDB is not available.");
       }
-
-      await db.open(); // Open the database
-
-      // Dynamically access the table using the tableName argument
+      await db.open();
+  
+      // Retrieve mapping from the enum
+      const tableMapping = TableMetadataMapping[tableName] || {};
+      const { metadataTable = "", dataKey = tableName } = tableMapping;
+  
       const table = db[tableName];
-
-      // Check if the table exists
+      const metadataTableRef = metadataTable ? db[metadataTable] : null;
+  
       if (!table) {
         throw new Error(`Table ${tableName} not found in IndexedDB.`);
       }
-
-      // Fetch all records from the table
+  
+      // Fetch data and metadata
       const data = await table.toArray();
+      const metadata = metadataTableRef ? await metadataTableRef.toArray() : [];
+  
+      // Construct finalData dynamically
+      const finalData: Record<string, any> = {
+        [dataKey]: data,
+        metadata
+      };
   
       if (data.length === 0) {
         console.log(`No data found in table ${tableName}.`);
       }
-
-      return data;
+  
+      return finalData;
     } catch (error) {
       console.error(`Error fetching data from table ${tableName}:`, error);
-      throw error; // Propagate the error so it can be handled by the caller
+      throw error;
     }
-  }  
+  } 
 }
 export default DBService;
