@@ -179,6 +179,24 @@ interface DraftMetaData {
   applicationCount: number;
 }
 
+interface OfflineSubmission {
+  _id: string;
+  formId: string;
+  submissionId: string;
+  data: Record<string, any>;
+  metadata: Record<string, any>;
+  created: string;
+  modified: string;
+  owner: string;
+  access: string;
+  externalIds: string;
+  roles: string;
+  draftId: string;
+  draftidorigin: string;
+  type: string;
+}
+
+
 // ToDO: check whether Event and IncompleteEvent is needed as the FE will be showing only the formsflow related forms and submision.
 
 class DigitalFormsDB extends Dexie {
@@ -205,6 +223,7 @@ class DigitalFormsDB extends Dexie {
   applicationMetaData!: Table<ApplicationMetaData>;
   draft!: Table<Draft>;
   draftMetaData!: Table<DraftMetaData>;
+  offlineSubmission!: Table<OfflineSubmission>
 
   constructor() {
     super("digitalForms");
@@ -220,6 +239,7 @@ class DigitalFormsDB extends Dexie {
       applicationMetaData: "key",
       draft: "id, applicationId, formId",
       draftMetaData:"key",
+      offlineSubmission: "_id, formId, submissionId, draftId, type, draftidorigin",
 
     });
 

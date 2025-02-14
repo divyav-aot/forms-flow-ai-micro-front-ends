@@ -1,11 +1,12 @@
 import { db } from "./db";
 import { fetchStaticData } from "../request/staticDataApi";
-import { handleError } from "../helpers/helperServices";
+import { constructApplicationData, constructSubmissionData, handleError } from "../helpers/helperServices";
 import { StaticResources, StaticTables, TableMetadataMapping } from "../constants/constants";
+import testFormData from "./testFormData.json";
 
 class DBService {
     
-  private static async saveToIndexedDB(resourceName: string, data: any) {
+  private static async saveRSBCDataToIndexedDB(resourceName: string, data: any) {
     try {
       // Check if IndexedDB is available
       if (!db) {
@@ -78,6 +79,27 @@ class DBService {
           await db.jurisdictionCountry.bulkPut(data);
           console.log("Jurisdiction Country data saved to IndexedDB.");
           break;
+        default:
+          console.log(`No matching table found for resource: ${resourceName}`);
+      }
+    } catch (error) {
+      console.error(`Error saving ${resourceName} to IndexedDB:`, error);
+    }
+  }
+
+  private static async saveFFDataToIndexedDB(resourceName: string, data: any) {
+    try {
+      // Check if IndexedDB is available
+      if (!db) {
+        throw new Error("IndexedDB is not available.");
+      }
+
+      // Check if data is valid
+      if (!data || data.length === 0) {
+        throw new Error(`No valid data provided for ${resourceName}.`);
+      }
+
+      switch (resourceName) {
         case "formList":
           await db.formList.clear();
           await db.formList.bulkPut(data.forms);
@@ -102,6 +124,16 @@ class DBService {
           })
           console.log("Applications data saved to IndexedDB.");
           break;
+        case "applicationMetaData":
+          await db.applicationMetaData.put({
+            key: "metadata",
+            draftCount: data.draftCount,
+            totalCount: data.totalCount,
+            pageNo: data.pageNo,
+            limit: data.limit
+          })
+          console.log("Applications Metadata data saved to IndexedDB.");
+          break;
         case "draft":
           await db.draft.clear();
           await db.draft.bulkPut(data.drafts);
@@ -111,6 +143,11 @@ class DBService {
             totalCount: data.totalCount,
           })
           console.log("Drafts data saved to IndexedDB.");
+          break;
+        case "submission":
+          // await db.submission.clear();
+          await db.offlineSubmission.put(data);
+          console.log("Offline submission data saved to IndexedDB.");
           break;
         default:
           console.log(`No matching table found for resource: ${resourceName}`);
@@ -130,7 +167,7 @@ class DBService {
         try {              
             await fetchStaticData(
               resource,
-              (data: any) => this.saveToIndexedDB(resource, data),
+              (data: any) => this.saveRSBCDataToIndexedDB(resource, data),
               (error: any) => handleError(error)
             );          
         } catch (error) {
@@ -169,9 +206,51 @@ class DBService {
   
   public static async insertFFData (resourceName: string, data: any): Promise<void> {
     try {
-      await this.saveToIndexedDB(resourceName, data);         
+      await this.saveFFDataToIndexedDB(resourceName, data);         
     } catch (error) {
       console.error(`Error processing resource ${resourceName}:`, error);
+    }
+  }
+
+  private static async fetchFormDataById(formId: string): Promise<any> {
+    try {
+        if (!db) {
+            throw new Error("IndexedDB is not available.");
+        }
+        await db.open();
+
+        // Get reference to the formDefinition table
+        const table = db["formDefinition"];
+
+        if (!table) {
+            throw new Error("Table formDefinition not found in IndexedDB.");
+        }
+
+        // Fetch row by ID
+        const data = await table.get(formId);
+
+        if (!data) {
+            console.log(`No record found with id: ${formId}`);
+            return null;
+        }
+
+        return data;
+    } catch (error) {
+        console.error(`Error fetching data from formDefinition with id ${formId}:`, error);
+        throw error;
+    }
+  }
+
+  public static async insertSubmissionData (data: any, formId: string): Promise<void> {
+    try {
+      // const formData = this.fetchFromDataById(formId);
+      // const formData = testFormData;
+      const formData = {};
+      const submissionData = constructSubmissionData(data, formId);
+      const applicationData = constructApplicationData(formId, submissionData._id, formData)
+      await this.saveFFDataToIndexedDB("submission", submissionData);         
+    } catch (error) {
+      console.error(`Error processing resource submission:`, error);
     }
   }
   
