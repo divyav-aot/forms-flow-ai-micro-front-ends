@@ -23,10 +23,10 @@ export const constructSubmissionData = (submission: any, formId: string) => {
     submissionId: submissionId,
     created: now,
     modified: now,
-    data: submission.data,
-    metadata: submission.metadata,
+    data: submission?.data,
+    metadata: submission?.metadata,
     formId: formId,
-    owner: userDetails.email,
+    owner: userDetails?.email,
     externalIds: [],
     roles: [],
     access: [],
@@ -42,7 +42,7 @@ export const constructApplicationData = (formId: string, submissionId: string, f
   const now = new Date().toISOString(); // Current datetime in ISO format
 
   return {
-    applicationName: formData.title,
+    applicationName: formData?.title,
     applicationStatus: "In Progress",
     created: now,
     createdBy: userDetails?.preferred_username || "Unknown User",
