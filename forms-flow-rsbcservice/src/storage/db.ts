@@ -113,6 +113,29 @@ interface IncompleteEvent {
   [key: string]: any; // Allow additional fields for complex structure
 }
 
+export interface IndividualFormDefinition {
+  id: string;
+  title: string;
+  name: string;
+  path: string;
+  display: string;
+  isBundle: boolean;
+  machineName: string;
+  created: string;
+  modified: string;
+  owner: string;
+  parentFormId: string;
+  submissionAccess: any[];
+  access: any[];
+  tags: string[];
+  type: string;
+}
+
+interface FormDefinitionList {
+  forms: IndividualFormDefinition[];
+}
+
+
 // ToDO: check whether Event and IncompleteEvent is needed as the FE will be showing only the formsflow related forms and submision.
 
 class DigitalFormsDB extends Dexie {
@@ -133,6 +156,7 @@ class DigitalFormsDB extends Dexie {
   nscPuj!: Table<NSCPuj>;
   jurisdictionCountry!: Table<JurisdictionCountry>;
   incompleteEvent!: Table<IncompleteEvent>;
+  forms!: Table<IndividualFormDefinition>;
 
   constructor() {
     super("digitalForms");

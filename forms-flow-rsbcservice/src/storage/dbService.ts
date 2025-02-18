@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { fetchStaticData } from "../request/staticDataApi";
 import { handleError } from "../helpers/helperServices";
+import { IndividualFormDefinition } from "./db"; 
 
 class DBService {
     
@@ -127,6 +128,25 @@ class DBService {
       console.error("Error in data fetching and saving process:", error);
     }
   }
+
+  public static async saveFormToIndexedDB(form: IndividualFormDefinition): Promise<void> {
+    try {
+        if (!db) {
+            throw new Error("IndexedDB is not available.");
+        }
+
+        if (!form) {
+            console.warn("No valid form provided.");
+            return;
+        }
+
+        await db.forms.put(form); // Efficient insert or update
+        console.log(`Form with ID ${form.id} added or updated in IndexedDB.`);
+    } catch (error) {
+        console.error("Error saving form to IndexedDB:", error);
+    }
+}
+
   
 
   public static async fetchStaticDataFromTable(
