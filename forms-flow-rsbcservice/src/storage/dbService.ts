@@ -113,26 +113,8 @@ class DBService {
           console.log("Form List data saved to IndexedDB.");
           break;
         case "application":
-          await db.application.clear();
-          await db.application.bulkPut(data.applications);
-          await db.applicationMetaData.put({
-            key: "metadata",
-            draftCount: data.draftCount,
-            totalCount: data.totalCount,
-            pageNo: data.pageNo,
-            limit: data.limit
-          })
-          console.log("Applications data saved to IndexedDB.");
-          break;
-        case "applicationMetaData":
-          await db.applicationMetaData.put({
-            key: "metadata",
-            draftCount: data.draftCount,
-            totalCount: data.totalCount,
-            pageNo: data.pageNo,
-            limit: data.limit
-          })
-          console.log("Applications Metadata data saved to IndexedDB.");
+          // await db.application.clear();
+          await db.application.put(data);
           break;
         case "draft":
           await db.draft.clear();
@@ -212,7 +194,7 @@ class DBService {
     }
   }
 
-  private static async fetchFormDataById(formId: string): Promise<any> {
+  public static async fetchOfflineFormById(formId: string): Promise<any> {
     try {
         if (!db) {
             throw new Error("IndexedDB is not available.");
@@ -243,14 +225,15 @@ class DBService {
 
   public static async insertSubmissionData (data: any, formId: string): Promise<void> {
     try {
-      // const formData = this.fetchFromDataById(formId);
+      // const formData = this.fetchOfflineFormById(formId);
       // const formData = testFormData;
       const formData = {};
       const submissionData = constructSubmissionData(data, formId);
       const applicationData = constructApplicationData(formId, submissionData._id, formData)
-      await this.saveFFDataToIndexedDB("submission", submissionData);         
+      await this.saveFFDataToIndexedDB("submission", submissionData);
+      await this.saveFFDataToIndexedDB("application", applicationData)         
     } catch (error) {
-      console.error(`Error processing resource submission:`, error);
+      console.error(`Error processing offline submission or application data:`, error);
     }
   }
   
@@ -291,6 +274,71 @@ class DBService {
       console.error(`Error fetching data from table ${tableName}:`, error);
       throw error;
     }
-  } 
+  }
+  private static getMetadata(data: any) {
+    return {
+      draftCount: 0,
+      totalCount: data?.length,
+      pageNo: 1,
+      limit: 5
+    }
+  }
+  public static async fetchOfflineSubmissionList(): Promise<any> {
+    try {
+      if (!db) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await db.open();
+      const table = db["application"];  
+      if (!table) {
+        throw new Error(`Table application not found in IndexedDB.`);
+      }
+      const data = await table.toArray();
+      if (data.length === 0) {
+        console.log(`No data found in table application.`);
+        return;
+      }
+      // Fetch Metadata for the submission dashboard
+      const metadata = this.getMetadata(data);
+      const finalData: Record<string, any> = {
+        ["applications"]: data,
+        metadata
+      };
+      
+      return finalData;
+
+    } catch (error) {
+      console.error(`Error fetching data from table application:`, error);
+      throw error;
+    }
+  }
+  public static async fetchOfflineSubmissionById(submissionId: string): Promise<any> {
+    try {
+        if (!db) {
+            throw new Error("IndexedDB is not available.");
+        }
+        await db.open();
+
+        // Get reference to the formDefinition table
+        const table = db["offlineSubmission"];
+
+        if (!table) {
+            throw new Error("Table offlineSubmission not found in IndexedDB.");
+        }
+
+        // Fetch row by ID
+        const data = await table.get(submissionId);
+
+        if (!data) {
+            console.log(`No record found with id: ${submissionId}`);
+            return null;
+        }
+
+        return data;
+    } catch (error) {
+        console.error(`Error fetching data from offlineSubmission with id ${submissionId}:`, error);
+        throw error;
+    }
+  }
 }
 export default DBService;
