@@ -140,7 +140,7 @@ class DBService {
             return;
         }
 
-        await db.forms.put(form); // Efficient insert or update
+        await db.forms.put(form);
         console.log(`Form with ID ${form.id} added or updated in IndexedDB.`);
     } catch (error) {
         console.error("Error saving form to IndexedDB:", error);
