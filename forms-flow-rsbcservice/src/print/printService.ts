@@ -1,7 +1,7 @@
 import React, { JSX } from "react";
 import { formsPNG } from "../helpers/helperServices";
 import { SVGprint } from "./svgPrint";
-import DBService from "../storage/dbService";
+import { DBFetchService } from "../formsflow-rsbcservices";
 
 interface ComponentSettings {
   stage?: string;
@@ -16,7 +16,7 @@ class PrintServices {
     renderStage: string,
     isForSubmissionPayload: boolean
   ): Promise<JSX.Element[]> {    
-    let impoundLotOperators = await DBService.fetchStaticDataFromTable(
+    let impoundLotOperators = await DBFetchService.fetchStaticDataFromTable(
       "impoundLotOperators"
     );
     let isPreview = isEditMode;
