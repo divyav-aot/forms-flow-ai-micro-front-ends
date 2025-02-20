@@ -2,7 +2,7 @@ import { rsbcDb } from "./rsbcDb";
 import { ffDb } from "./ffDb";
 import { fetchStaticData } from "../request/staticDataApi";
 import { handleError } from "../helpers/helperServices";
-import { constructApplicationData, constructSubmissionData } from "../helpers/helperDbServices";
+import { constructApplicationData, constructOfflineSubmissionData } from "../helpers/helperDbServices";
 import { StaticResources } from "../constants/constants";
 import testFormData from "./testFormData.json";
 
@@ -191,7 +191,7 @@ class DBInsertService {
       // const formData = this.fetchOfflineFormById(formId);
       // const formData = testFormData;
       const formData = {};
-      const submissionData = constructSubmissionData(data, formId);
+      const submissionData = constructOfflineSubmissionData(data, formId);
       const applicationData = constructApplicationData(formId, submissionData._id, formData);
       await this.saveFFDataToIndexedDB("offlineSubmission", submissionData);
       await this.saveFFDataToIndexedDB("application", applicationData);

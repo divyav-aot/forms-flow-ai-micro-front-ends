@@ -69,21 +69,24 @@ interface DraftMetaData {
   applicationCount: number;
 }
 
+interface SubmissionData {
+  owner: string;
+  access: any[];
+  externalIds: any[];
+  submissionId: string;
+  roles: any[];
+  metadata: Record<string, any>;
+
+}
+
 interface OfflineSubmission {
   _id: string;
   formId: string;
-  submissionId: string;
   data: Record<string, any>;
   draftData: Record<string, any>;
-  metadata: Record<string, any>;
+  submissionData: SubmissionData;
   created: string;
   modified: string;
-  owner: string;
-  access: string;
-  externalIds: string;
-  roles: string;
-  draftId: string;
-  draftidorigin: string;
   type: string;
 }
 

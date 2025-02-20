@@ -7,26 +7,30 @@ export const getUserDetails = () => {
   return JSON.parse(StorageService.get(StorageService.User.USER_DETAILS))
 }
 
-
-export const constructSubmissionData = (submission: any, formId: string) => {
+const constructSubmissionDataObject = (submission: any) => {
   const userDetails = getUserDetails();
   const submissionId = generateGUID();
+  return {
+    submissionId: submissionId,
+    metadata: submission?.metadata,
+    owner: userDetails?.email,
+    externalIds: [],
+    roles: [],
+    access: []
+  };
+}
+
+export const constructOfflineSubmissionData = (submission: any, formId: string) => {
+  const submissionData = constructSubmissionDataObject(submission);
   const _id = generateGUID();
   const now = new Date().toISOString();
   return {
     _id: _id,
-    submissionId: submissionId,
+    submissionData: submissionData,
     created: now,
     modified: now,
     data: submission?.data,
-    metadata: submission?.metadata,
     formId: formId,
-    owner: userDetails?.email,
-    externalIds: [],
-    roles: [],
-    access: [],
-    draftId: "",
-    draftidorigin: "",
     type: "application"
   };
 }
