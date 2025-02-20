@@ -1,5 +1,6 @@
-import { db } from "./db";
-import { StaticTables, TableMetadataMapping } from "../constants/constants";
+import { rsbcDb } from "./rsbcDb";
+import { ffDb } from "./ffDb";
+import { StaticTables } from "../constants/constants";
 import testFormData from "./testFormData.json";
 
 class DBFetchService {
@@ -14,12 +15,12 @@ class DBFetchService {
    */
   public static async fetchStaticDataFromTable(tableName: string): Promise<any[]> {
     try {
-      if (!db) throw new Error("IndexedDB is not available.");
+      if (!rsbcDb) throw new Error("IndexedDB is not available.");
       if (!StaticTables.includes(tableName)) throw new Error(`Table ${tableName} is not accessible.`);
   
-      await db.open(); // Ensure the database is open
+      await rsbcDb.open(); // Ensure the database is open
   
-      const table = db[tableName];
+      const table = rsbcDb[tableName];
       if (!table) throw new Error(`Table ${tableName} not found in IndexedDB.`);
   
       const data = await table.toArray();
@@ -41,13 +42,13 @@ class DBFetchService {
    */
   public static async fetchOfflineFormById(formId: string): Promise<any> {
     try {
-        if (!db) {
+        if (!ffDb) {
             throw new Error("IndexedDB is not available.");
         }
-        await db.open();
+        await ffDb.open();
 
         // Get reference to the formDefinition table
-        const table = db["formDefinition"];
+        const table = ffDb["formDefinition"];
 
         if (!table) {
             throw new Error("Table formDefinition not found in IndexedDB.");
@@ -68,46 +69,6 @@ class DBFetchService {
     }
   }
 
-  // ToDo: This should be removed
-  public static async fetchDataFromTable(tableName: string): Promise<any> {
-    try {
-      if (!db) {
-        throw new Error("IndexedDB is not available.");
-      }
-      await db.open();
-  
-      // Retrieve mapping from the enum
-      const tableMapping = TableMetadataMapping[tableName] || {};
-      const { metadataTable = "", dataKey = tableName } = tableMapping;
-  
-      const table = db[tableName];
-      const metadataTableRef = metadataTable ? db[metadataTable] : null;
-  
-      if (!table) {
-        throw new Error(`Table ${tableName} not found in IndexedDB.`);
-      }
-  
-      // Fetch data and metadata
-      const data = await table.toArray();
-      const metadata = metadataTableRef ? await metadataTableRef.toArray() : [];
-  
-      // Construct finalData dynamically
-      const finalData: Record<string, any> = {
-        [dataKey]: data,
-        metadata
-      };
-  
-      if (data.length === 0) {
-        console.log(`No data found in table ${tableName}.`);
-      }
-  
-      return finalData;
-    } catch (error) {
-      console.error(`Error fetching data from table ${tableName}:`, error);
-      throw error;
-    }
-  }
-
   /**
    * Generates metadata for fetched data.
    * 
@@ -124,7 +85,7 @@ class DBFetchService {
   }
 
   /**
-   * Fetches the list of offline submissions from the "application" table.
+   * Fetches the list of offline submissions from the "applications" table.
    * Includes metadata for pagination or dashboard representation.
    * 
    * @returns A promise resolving to an object containing submissions and metadata.
@@ -132,11 +93,11 @@ class DBFetchService {
    */
   public static async fetchOfflineSubmissionList(): Promise<any> {
     try {
-      if (!db) {
+      if (!ffDb) {
         throw new Error("IndexedDB is not available.");
       }
-      await db.open();
-      const table = db["application"];  
+      await ffDb.open();
+      const table = ffDb["applications"];  
       if (!table) {
         throw new Error(`Table application not found in IndexedDB.`);
       }
@@ -169,13 +130,13 @@ class DBFetchService {
    */
   public static async fetchOfflineSubmissionById(submissionId: string): Promise<any> {
     try {
-        if (!db) {
+        if (!ffDb) {
             throw new Error("IndexedDB is not available.");
         }
-        await db.open();
+        await ffDb.open();
 
         // Get reference to the formDefinition table
-        const table = db["offlineSubmission"];
+        const table = ffDb["offlineSubmission"];
 
         if (!table) {
             throw new Error("Table offlineSubmission not found in IndexedDB.");

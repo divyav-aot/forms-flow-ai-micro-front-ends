@@ -1,6 +1,8 @@
-import { db } from "./db";
+import { rsbcDb } from "./rsbcDb";
+import { ffDb } from "./ffDb";
 import { fetchStaticData } from "../request/staticDataApi";
-import { constructApplicationData, constructSubmissionData, handleError } from "../helpers/helperServices";
+import { handleError } from "../helpers/helperServices";
+import { constructApplicationData, constructSubmissionData } from "../helpers/helperDbServices";
 import { StaticResources } from "../constants/constants";
 import testFormData from "./testFormData.json";
 
@@ -14,7 +16,7 @@ class DBInsertService {
   private static async saveRSBCDataToIndexedDB(resourceName: string, data: any) {
     try {
       // Check if IndexedDB is available
-      if (!db) {
+      if (!rsbcDb) {
         throw new Error("IndexedDB is not available.");
       }
 
@@ -25,63 +27,63 @@ class DBInsertService {
 
       switch (resourceName) {
         case "agencies":
-          await db.agencies.clear();
-          await db.agencies.bulkPut(data);
+          await rsbcDb.agencies.clear();
+          await rsbcDb.agencies.bulkPut(data);
           console.log("Agencies data saved to IndexedDB.");
           break;
         case "cities":
-          await db.cities.clear();
-          await db.cities.bulkPut(data);
+          await rsbcDb.cities.clear();
+          await rsbcDb.cities.bulkPut(data);
           console.log("Cities data saved to IndexedDB.");
           break;
         case "countries":
-          await db.countries.clear();
-          await db.countries.bulkPut(data);
+          await rsbcDb.countries.clear();
+          await rsbcDb.countries.bulkPut(data);
           console.log("Countries data saved to IndexedDB.");
           break;
         case "jurisdictions":
-          await db.jurisdictions.clear();
-          await db.jurisdictions.bulkPut(data);
+          await rsbcDb.jurisdictions.clear();
+          await rsbcDb.jurisdictions.bulkPut(data);
           console.log("Jurisdictions data saved to IndexedDB.");
           break;
         case "impound_lot_operators":
-          await db.impoundLotOperators.clear();
-          await db.impoundLotOperators.bulkPut(data);
+          await rsbcDb.impoundLotOperators.clear();
+          await rsbcDb.impoundLotOperators.bulkPut(data);
           console.log("Impound Lot Operators data saved to IndexedDB.");
           break;
         case "provinces":
-          await db.provinces.clear();
-          await db.provinces.bulkPut(data);
+          await rsbcDb.provinces.clear();
+          await rsbcDb.provinces.bulkPut(data);
           console.log("Provinces data saved to IndexedDB.");
           break;
         case "vehicle_styles":
-          await db.vehicleStyles.clear();
-          await db.vehicleStyles.bulkPut(data);
+          await rsbcDb.vehicleStyles.clear();
+          await rsbcDb.vehicleStyles.bulkPut(data);
           console.log("Vehicle Styles data saved to IndexedDB.");
           break;
         case "vehicle_types":
-          await db.vehicleTypes.clear();
-          await db.vehicleTypes.bulkPut(data);
+          await rsbcDb.vehicleTypes.clear();
+          await rsbcDb.vehicleTypes.bulkPut(data);
           console.log("Vehicle Types data saved to IndexedDB.");
           break;
         case "vehicle_colours":
-          await db.vehicleColours.clear();
-          await db.vehicleColours.bulkPut(data);
+          await rsbcDb.vehicleColours.clear();
+          await rsbcDb.vehicleColours.bulkPut(data);
           console.log("Vehicle Colours data saved to IndexedDB.");
           break;
         case "vehicles":
-          await db.vehicles.clear();
-          await db.vehicles.bulkPut(data);
+          await rsbcDb.vehicles.clear();
+          await rsbcDb.vehicles.bulkPut(data);
           console.log("Vehicles data saved to IndexedDB.");
           break;
         case "nsc_puj":
-          await db.nscPuj.clear();
-          await db.nscPuj.bulkPut(data);
+          await rsbcDb.nscPuj.clear();
+          await rsbcDb.nscPuj.bulkPut(data);
           console.log("NSC PUJ data saved to IndexedDB.");
           break;
         case "jurisdiction_country":
-          await db.jurisdictionCountry.clear();
-          await db.jurisdictionCountry.bulkPut(data);
+          await rsbcDb.jurisdictionCountry.clear();
+          await rsbcDb.jurisdictionCountry.bulkPut(data);
           console.log("Jurisdiction Country data saved to IndexedDB.");
           break;
         default:
@@ -97,7 +99,7 @@ class DBInsertService {
    */
   public static async fetchAndSaveStaticData(): Promise<void> {
     try {
-      await db.open();
+      await rsbcDb.open();
       console.log("Fetching and saving static data...");
 
       // Create an array of promises for fetching data
@@ -130,7 +132,7 @@ class DBInsertService {
   private static async saveFFDataToIndexedDB(resourceName: string, data: any) {
     try {
       // Check if IndexedDB is available
-      if (!db) {
+      if (!ffDb) {
         throw new Error("IndexedDB is not available.");
       }
 
@@ -140,11 +142,11 @@ class DBInsertService {
       }
 
       switch (resourceName) {
-        case "formList":
-          await db.formList.clear();
-          await db.formList.bulkPut(data.forms);
-          await db.formListMetaData.clear();
-          await db.formListMetaData.put({
+        case "formDefinitionList":
+          await ffDb.formDefinitionList.clear();
+          await ffDb.formDefinitionList.bulkPut(data.forms);
+          await ffDb.formListMetaData.clear();
+          await ffDb.formListMetaData.put({
             key: "metadata",
             totalCount: data.totalCount,
             pageNo: data.pageNo,
@@ -153,22 +155,22 @@ class DBInsertService {
           console.log("Form List data saved to IndexedDB.");
           break;
         case "application":
-          // await db.application.clear();
-          await db.application.put(data);
+          // await ffDb.application.clear();
+          await ffDb.applications.put(data);
           break;
-        case "draft":
-          await db.draft.clear();
-          await db.draft.bulkPut(data.drafts);
-          await db.draftMetaData.put({
+        case "drafts":
+          await ffDb.drafts.clear();
+          await ffDb.drafts.bulkPut(data.drafts);
+          await ffDb.draftMetaData.put({
             key: "metadata",
             applicationCount: data.applicationCount,
             totalCount: data.totalCount,
           })
           console.log("Drafts data saved to IndexedDB.");
           break;
-        case "submission":
-          // await db.submission.clear();
-          await db.offlineSubmission.put(data);
+        case "offlineSubmission":
+          // await ffDb.submission.clear();
+          await ffDb.offlineSubmissions.put(data);
           console.log("Offline submission data saved to IndexedDB.");
           break;
         default:
@@ -180,19 +182,6 @@ class DBInsertService {
   }  
   
   /**
-   * Inserts FormFlow data into IndexedDB.
-   * @param {string} resourceName - The name of the resource.
-   * @param {any} data - The data to be inserted.
-   */
-  public static async insertFFData (resourceName: string, data: any): Promise<void> {
-    try {
-      await this.saveFFDataToIndexedDB(resourceName, data);         
-    } catch (error) {
-      console.error(`Error processing resource ${resourceName}:`, error);
-    }
-  }
-
-  /**
    * Inserts submission data into IndexedDB.
    * @param {any} data - Submission data to be stored.
    * @param {string} formId - Form ID associated with the submission.
@@ -203,9 +192,9 @@ class DBInsertService {
       // const formData = testFormData;
       const formData = {};
       const submissionData = constructSubmissionData(data, formId);
-      const applicationData = constructApplicationData(formId, submissionData._id, formData)
-      await this.saveFFDataToIndexedDB("submission", submissionData);
-      await this.saveFFDataToIndexedDB("application", applicationData)         
+      const applicationData = constructApplicationData(formId, submissionData._id, formData);
+      await this.saveFFDataToIndexedDB("offlineSubmission", submissionData);
+      await this.saveFFDataToIndexedDB("application", applicationData);
     } catch (error) {
       console.error(`Error processing offline submission or application data:`, error);
     }

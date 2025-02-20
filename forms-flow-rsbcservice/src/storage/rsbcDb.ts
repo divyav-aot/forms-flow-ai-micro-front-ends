@@ -102,90 +102,6 @@ interface JurisdictionCountry {
   objectDsc: string;
 }
 
-// Below are formsflow.ai specific interfaces
-
-interface FormList {
-  id: string;
-  formId: string;
-  formName: string;
-  formType: string;
-  processKey: string;
-  modified: string;
-
-}
-
-interface FormListMetaData {
-  key: string;
-  totalCount: number;
-  pageNo: number;
-  limit: number; 
-
-}
-
-interface Application {
-  id: number;
-  applicationName: string;
-  applicationStatus: string;
-  created: string;
-  createdBy: string;
-  eventName: string;
-  formId: string;
-  formProcessMapperId: string;
-  formType: string;
-  isResubmit: boolean;
-  modified: string;
-  modifiedBy: string;
-  processInstanceId: string;
-  processKey: string;
-  processName: string;
-  processTenant: string;
-  submissionId: string;
-}
-
-interface ApplicationMetaData {
-  key: string;
-  draftCount: number;
-  totalCount: number;
-  pageNo: number;
-  limit: number; 
-
-}
-
-interface Draft {
-  id: number;
-  applicationId: number;
-  formId: string;
-  DraftName: string;
-  created: string;
-  modified: string;
-  data: Record<string, any>; // Since the structure varies, we use a generic key-value object
-  CreatedBy: string;
-  processName: string;
-  formType: string;
-}
-
-interface DraftMetaData {
-  key: string;
-  totalCount: number;
-  applicationCount: number;
-}
-
-interface OfflineSubmission {
-  _id: string;
-  formId: string;
-  submissionId: string;
-  data: Record<string, any>;
-  metadata: Record<string, any>;
-  created: string;
-  modified: string;
-  owner: string;
-  access: string;
-  externalIds: string;
-  roles: string;
-  draftId: string;
-  draftidorigin: string;
-  type: string;
-}
 
 // Database class extending Dexie to manage IndexedDB storage
 class DigitalFormsDB extends Dexie {
@@ -201,19 +117,10 @@ class DigitalFormsDB extends Dexie {
   countries!: Table<Country>;
   cities!: Table<City>;
   agencies!: Table<Agency>;
-  // event!: Table<Event>;
   formID!: Table<FormID>;
   vehicleTypes!: Table<VehicleType>;
   nscPuj!: Table<NSCPuj>;
   jurisdictionCountry!: Table<JurisdictionCountry>;
-  // incompleteEvent!: Table<IncompleteEvent>;
-  formList!: Table<FormList>;
-  formListMetaData!: Table<FormListMetaData>;
-  application!: Table<Application>;
-  applicationMetaData!: Table<ApplicationMetaData>;
-  draft!: Table<Draft>;
-  draftMetaData!: Table<DraftMetaData>;
-  offlineSubmission!: Table<OfflineSubmission>
 
   constructor() {
     super("digitalForms");
@@ -221,17 +128,6 @@ class DigitalFormsDB extends Dexie {
     // Database schema definitions
     //if you need to change any of these definitions add a new version below instead of changing the current one. If there is a change that
     //requires a migration you need to add a .upgrade(() => {}) to the end of the version to handle how the data is migrated.
-
-    this.version(1).stores({
-      formList: "id, formId, formName, formType, processKey, modified",
-      formListMetaData: "key",
-      application: "id, formId, submissionId",
-      applicationMetaData: "key",
-      draft: "id, applicationId, formId",
-      draftMetaData:"key",
-      offlineSubmission: "_id, formId, submissionId, draftId, type, draftidorigin",
-
-    });
 
     this.version(3).stores({
       user: "user_guid, business_guid, username, agency, badge_number, last_name, first_name, display_name, login",
@@ -258,18 +154,18 @@ class DigitalFormsDB extends Dexie {
 }
 
 // Initialize the database
-export const db = new DigitalFormsDB();
+export const rsbcDb = new DigitalFormsDB();
 
 // Open the database and clear formID for testing
 const initDB = async () => {
   try {
-    if (!db.isOpen()) {
-      await db.open();
+    if (!rsbcDb.isOpen()) {
+      await rsbcDb.open();
       console.log("IndexedDB is open.");
     } else {
       console.log("IndexedDB is already open.");
     }
-    await db.formID.clear();
+    await rsbcDb.formID.clear();
     console.log("Form IDs cleared.");
   } catch (error) {
     console.error("Open failed: " + error);
