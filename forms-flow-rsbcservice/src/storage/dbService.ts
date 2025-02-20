@@ -1,12 +1,24 @@
 import { db } from "./db";
 import { fetchStaticData } from "../request/staticDataApi";
-import { constructApplicationData, constructSubmissionData, handleError } from "../helpers/helperServices";
-import { StaticResources, StaticTables, TableMetadataMapping } from "../constants/constants";
-import testFormData from "./testFormData.json";
+import {
+  constructApplicationData,
+  constructSubmissionData,
+  constructDrafSubmissiontData,
+  constructDraftApplicationData,
+  handleError,
+} from "../helpers/helperServices";
+import {
+  StaticResources,
+  StaticTables,
+  TableMetadataMapping,
+} from "../constants/constants";
+// import testFormData from "./testFormData.json";
 
 class DBService {
-    
-  private static async saveRSBCDataToIndexedDB(resourceName: string, data: any) {
+  private static async saveRSBCDataToIndexedDB(
+    resourceName: string,
+    data: any
+  ) {
     try {
       // Check if IndexedDB is available
       if (!db) {
@@ -108,8 +120,8 @@ class DBService {
             key: "metadata",
             totalCount: data.totalCount,
             pageNo: data.pageNo,
-            limit: data.limit
-          })
+            limit: data.limit,
+          });
           console.log("Form List data saved to IndexedDB.");
           break;
         case "application":
@@ -117,13 +129,14 @@ class DBService {
           await db.application.put(data);
           break;
         case "draft":
-          await db.draft.clear();
-          await db.draft.bulkPut(data.drafts);
-          await db.draftMetaData.put({
-            key: "metadata",
-            applicationCount: data.applicationCount,
-            totalCount: data.totalCount,
-          })
+          await db.draft.put(data);
+          // await db.draft.clear();
+          // await db.draft.bulkPut(data.drafts);
+          // await db.draftMetaData.put({
+          //   key: "metadata",
+          //   applicationCount: data.applicationCount,
+          //   totalCount: data.totalCount,
+          // });
           console.log("Drafts data saved to IndexedDB.");
           break;
         case "submission":
@@ -146,12 +159,12 @@ class DBService {
 
       // Create an array of promises for fetching data
       const fetchPromises = StaticResources.map(async (resource) => {
-        try {              
-            await fetchStaticData(
-              resource,
-              (data: any) => this.saveRSBCDataToIndexedDB(resource, data),
-              (error: any) => handleError(error)
-            );          
+        try {
+          await fetchStaticData(
+            resource,
+            (data: any) => this.saveRSBCDataToIndexedDB(resource, data),
+            (error: any) => handleError(error)
+          );
         } catch (error) {
           console.error(`Error processing resource ${resource}:`, error);
         }
@@ -165,30 +178,36 @@ class DBService {
       console.error("Error in data fetching and saving process:", error);
     }
   }
-  
-  public static async fetchStaticDataFromTable(tableName: string): Promise<any[]> {
+
+  public static async fetchStaticDataFromTable(
+    tableName: string
+  ): Promise<any[]> {
     try {
       if (!db) throw new Error("IndexedDB is not available.");
-      if (!StaticTables.includes(tableName)) throw new Error(`Table ${tableName} is not accessible.`);
-  
+      if (!StaticTables.includes(tableName))
+        throw new Error(`Table ${tableName} is not accessible.`);
+
       await db.open(); // Ensure the database is open
-  
+
       const table = db[tableName];
       if (!table) throw new Error(`Table ${tableName} not found in IndexedDB.`);
-  
+
       const data = await table.toArray();
       if (!data.length) console.warn(`No data found in table ${tableName}.`);
-  
+
       return data;
     } catch (error) {
       console.error(`Error fetching data from table ${tableName}:`, error);
       throw error;
     }
   }
-  
-  public static async insertFFData (resourceName: string, data: any): Promise<void> {
+
+  public static async insertFFData(
+    resourceName: string,
+    data: any
+  ): Promise<void> {
     try {
-      await this.saveFFDataToIndexedDB(resourceName, data);         
+      await this.saveFFDataToIndexedDB(resourceName, data);
     } catch (error) {
       console.error(`Error processing resource ${resourceName}:`, error);
     }
@@ -196,79 +215,113 @@ class DBService {
 
   public static async fetchOfflineFormById(formId: string): Promise<any> {
     try {
-        if (!db) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await db.open();
+      if (!db) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await db.open();
 
-        // Get reference to the formDefinition table
-        const table = db["formDefinition"];
+      // Get reference to the formDefinition table
+      const table = db["formDefinition"];
 
-        if (!table) {
-            throw new Error("Table formDefinition not found in IndexedDB.");
-        }
+      if (!table) {
+        throw new Error("Table formDefinition not found in IndexedDB.");
+      }
 
-        // Fetch row by ID
-        const data = await table.get(formId);
+      // Fetch row by ID
+      const data = await table.get(formId);
 
-        if (!data) {
-            console.log(`No record found with id: ${formId}`);
-            return null;
-        }
+      if (!data) {
+        console.log(`No record found with id: ${formId}`);
+        return null;
+      }
 
-        return data;
+      return data;
     } catch (error) {
-        console.error(`Error fetching data from formDefinition with id ${formId}:`, error);
-        throw error;
+      console.error(
+        `Error fetching data from formDefinition with id ${formId}:`,
+        error
+      );
+      throw error;
     }
   }
 
-  public static async insertSubmissionData (data: any, formId: string): Promise<void> {
+  public static async insertSubmissionData(
+    data: any,
+    formId: string
+  ): Promise<void> {
     try {
       // const formData = this.fetchOfflineFormById(formId);
       // const formData = testFormData;
       const formData = {};
       const submissionData = constructSubmissionData(data, formId);
-      const applicationData = constructApplicationData(formId, submissionData._id, formData)
+      const applicationData = constructApplicationData(
+        formId,
+        submissionData._id,
+        formData
+      );
       await this.saveFFDataToIndexedDB("submission", submissionData);
-      await this.saveFFDataToIndexedDB("application", applicationData)         
+      await this.saveFFDataToIndexedDB("application", applicationData);
     } catch (error) {
-      console.error(`Error processing offline submission or application data:`, error);
+      console.error(
+        `Error processing offline submission or application data:`,
+        error
+      );
     }
   }
-  
+
+  public static async insertDraftData(
+    data: any,
+    formId: string
+  ): Promise<void> {
+    try {
+      const draftData = constructDrafSubmissiontData(data, formId);
+      const applicationData = constructDraftApplicationData(
+        formId,
+        draftData._id,
+        data
+      );
+      await this.saveFFDataToIndexedDB("submission", draftData);
+      await this.saveFFDataToIndexedDB("draft", applicationData);
+    } catch (error) {
+      console.error(
+        `Error processing offline submission or application data:`,
+        error
+      );
+    }
+  }
+
   public static async fetchDataFromTable(tableName: string): Promise<any> {
     try {
       if (!db) {
         throw new Error("IndexedDB is not available.");
       }
       await db.open();
-  
+
       // Retrieve mapping from the enum
       const tableMapping = TableMetadataMapping[tableName] || {};
       const { metadataTable = "", dataKey = tableName } = tableMapping;
-  
+
       const table = db[tableName];
       const metadataTableRef = metadataTable ? db[metadataTable] : null;
-  
+
       if (!table) {
         throw new Error(`Table ${tableName} not found in IndexedDB.`);
       }
-  
+
       // Fetch data and metadata
       const data = await table.toArray();
       const metadata = metadataTableRef ? await metadataTableRef.toArray() : [];
-  
+
       // Construct finalData dynamically
       const finalData: Record<string, any> = {
         [dataKey]: data,
-        metadata
+        metadata,
       };
-  
+
       if (data.length === 0) {
         console.log(`No data found in table ${tableName}.`);
       }
-  
+
       return finalData;
     } catch (error) {
       console.error(`Error fetching data from table ${tableName}:`, error);
@@ -280,8 +333,8 @@ class DBService {
       draftCount: 0,
       totalCount: data?.length,
       pageNo: 1,
-      limit: 5
-    }
+      limit: 5,
+    };
   }
   public static async fetchOfflineSubmissionList(): Promise<any> {
     try {
@@ -289,7 +342,7 @@ class DBService {
         throw new Error("IndexedDB is not available.");
       }
       await db.open();
-      const table = db["application"];  
+      const table = db["application"];
       if (!table) {
         throw new Error(`Table application not found in IndexedDB.`);
       }
@@ -302,42 +355,46 @@ class DBService {
       const metadata = this.getMetadata(data);
       const finalData: Record<string, any> = {
         ["applications"]: data,
-        metadata
+        metadata,
       };
-      
-      return finalData;
 
+      return finalData;
     } catch (error) {
       console.error(`Error fetching data from table application:`, error);
       throw error;
     }
   }
-  public static async fetchOfflineSubmissionById(submissionId: string): Promise<any> {
+  public static async fetchOfflineSubmissionById(
+    submissionId: string
+  ): Promise<any> {
     try {
-        if (!db) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await db.open();
+      if (!db) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await db.open();
 
-        // Get reference to the formDefinition table
-        const table = db["offlineSubmission"];
+      // Get reference to the formDefinition table
+      const table = db["offlineSubmission"];
 
-        if (!table) {
-            throw new Error("Table offlineSubmission not found in IndexedDB.");
-        }
+      if (!table) {
+        throw new Error("Table offlineSubmission not found in IndexedDB.");
+      }
 
-        // Fetch row by ID
-        const data = await table.get(submissionId);
+      // Fetch row by ID
+      const data = await table.get(submissionId);
 
-        if (!data) {
-            console.log(`No record found with id: ${submissionId}`);
-            return null;
-        }
+      if (!data) {
+        console.log(`No record found with id: ${submissionId}`);
+        return null;
+      }
 
-        return data;
+      return data;
     } catch (error) {
-        console.error(`Error fetching data from offlineSubmission with id ${submissionId}:`, error);
-        throw error;
+      console.error(
+        `Error fetching data from offlineSubmission with id ${submissionId}:`,
+        error
+      );
+      throw error;
     }
   }
 }
