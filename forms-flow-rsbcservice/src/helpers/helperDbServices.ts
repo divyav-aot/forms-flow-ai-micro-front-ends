@@ -8,10 +8,8 @@ export const getUserDetails = () => {
 }
 
 const constructSubmissionDataObject = (submission: any) => {
-  const userDetails = getUserDetails();
-  const submissionId = generateGUID();
-  return {
-    submissionId: submissionId,
+  const userDetails = getUserDetails();  
+  return {    
     metadata: submission?.metadata,
     owner: userDetails?.email,
     externalIds: [],
@@ -23,10 +21,13 @@ const constructSubmissionDataObject = (submission: any) => {
 export const constructOfflineSubmissionData = (submission: any, formId: string) => {
   const submissionData = constructSubmissionDataObject(submission);
   const _id = generateGUID();
+  const submissionId = generateGUID();
   const now = new Date().toISOString();
   return {
     _id: _id,
+    localSubmissionId: submissionId,
     submissionData: submissionData,
+    draftData: {},
     created: now,
     modified: now,
     data: submission?.data,

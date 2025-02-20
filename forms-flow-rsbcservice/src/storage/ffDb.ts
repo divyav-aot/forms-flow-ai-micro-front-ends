@@ -69,22 +69,36 @@ interface DraftMetaData {
   applicationCount: number;
 }
 
+interface DraftData {
+  CreatedBy: string;
+  DraftName: string;
+  localApplicationId: string;
+  serverDraftId: string; // can be removed if not needed
+  serverApplicationId: string; // can be removed if not needed
+  formType: string;
+  processKey: string;
+  processName: string;
+}
+
 interface SubmissionData {
   owner: string;
   access: any[];
   externalIds: any[];
-  submissionId: string;
   roles: any[];
   metadata: Record<string, any>;
 
 }
 
+// brought localDraftId and localSubmissionId here because,
+//  Dexie does not allow indexes on nested properties like submissionData.localSubmissionId 
 interface OfflineSubmission {
   _id: string;
   formId: string;
   data: Record<string, any>;
-  draftData: Record<string, any>;
+  localDraftId?: string;
+  draftData: DraftData;
   submissionData: SubmissionData;
+  localSubmissionId?: string;
   created: string;
   modified: string;
   type: string;
@@ -115,7 +129,7 @@ class FormsFlowDB extends Dexie {
       applicationMetaData: "key",
       drafts: "id, applicationId, formId",
       draftMetaData:"key",
-      offlineSubmissions: "_id, formId, submissionId, draftId, type, draftidorigin",
+      offlineSubmissions: "_id, formId, type, localSubmissionId, localDraftId",
 
     });
   }

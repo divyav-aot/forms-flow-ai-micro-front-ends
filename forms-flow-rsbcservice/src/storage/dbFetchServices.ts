@@ -136,21 +136,23 @@ class DBFetchService {
         await ffDb.open();
 
         // Get reference to the formDefinition table
-        const table = ffDb["offlineSubmission"];
+        const offlineSubmissions = ffDb["offlineSubmissions"];
 
-        if (!table) {
+        if (!offlineSubmissions) {
             throw new Error("Table offlineSubmission not found in IndexedDB.");
         }
 
         // Fetch row by ID
-        const data = await table.get(submissionId);
-
-        if (!data) {
+        const submission = await offlineSubmissions
+          .where("localSubmissionId")
+          .equals(submissionId)
+          .first();
+        if (!submission) {
             console.log(`No record found with id: ${submissionId}`);
             return null;
         }
 
-        return data;
+        return submission;
     } catch (error) {
         console.error(`Error fetching data from offlineSubmission with id ${submissionId}:`, error);
         throw error;
