@@ -1,10 +1,10 @@
 import { db } from "./db";
 import { fetchStaticData } from "../request/staticDataApi";
 import { handleError } from "../helpers/helperServices";
-import { IndividualFormDefinition } from "./db"; 
+import { IndividualFormDefinition } from "./db";
 
 class DBService {
-    
+
   public static async saveToIndexedDB(resourceName: string, data: any) {
     try {
       // Check if IndexedDB is available
@@ -105,22 +105,20 @@ class DBService {
         "nsc_puj",
         "jurisdiction_country",
       ];
-      
 
-      // Create an array of promises for fetching data
+
       const fetchPromises = resources.map(async (resource) => {
-        try {              
-            await fetchStaticData(
-              resource,
-              (data: any) => this.saveToIndexedDB(resource, data),
-              (error: any) => handleError(error)
-            );          
+        try {
+          await fetchStaticData(
+            resource,
+            (data: any) => this.saveToIndexedDB(resource, data),
+            (error: any) => handleError(error)
+          );
         } catch (error) {
           console.error(`Error processing resource ${resource}:`, error);
         }
       });
 
-      // Wait for all API calls to complete in parallel
       await Promise.all(fetchPromises);
 
       console.log("All static data processed.");
@@ -131,23 +129,103 @@ class DBService {
 
   public static async saveFormToIndexedDB(form: IndividualFormDefinition): Promise<void> {
     try {
-        if (!db) {
-            throw new Error("IndexedDB is not available.");
-        }
+      if (!db) {
+        throw new Error("IndexedDB is not available.");
+      }
 
-        if (!form) {
-            console.warn("No valid form provided.");
-            return;
-        }
-
-        await db.forms.put(form);
-        console.log(`Form with ID ${form.id} added or updated in IndexedDB.`);
+      if (!form) {
+        console.warn("No valid form provided.");
+        return;
+      }
+      await db.formDefinitions.put(form);
+      console.log(`Form with ID ${form._id} added or updated in IndexedDB.`);
     } catch (error) {
-        console.error("Error saving form to IndexedDB:", error);
+      console.error("Error saving form to IndexedDB:", error);
     }
-}
+  }
+  /**
+     * Retrieves all form definitions from IndexedDB.
+     */
+  public static async getFormDefinitions(): Promise<IndividualFormDefinition[]> {
+    try {
+      if (!db) {
+        throw new Error("IndexedDB is not available.");
+      }
+      return await db.formDefinitions.toArray();
+    } catch (error) {
+      console.error("Error retrieving form definitions from IndexedDB:", error);
+      return [];
+    }
+  }
 
-  
+  /**
+   * Fetches form definitions from IndexedDB and transforms them into the required format.
+   */
+  public static async getTransformedForms(): Promise<{
+    forms: {
+      description: string;
+      formId: string;
+      formName: string;
+      formType: string;
+      id: string;
+      modified: string;
+      processKey: string;
+    }[];
+    limit: number;
+    pageNo: number;
+    totalCount: number;
+  }> {
+    try {
+      const forms = await DBService.getFormDefinitions();
+
+      // Get total count from the array length
+      const totalCount = forms.length;
+
+      // Transform and return the data
+      return DBService.transformFormDefinitions(forms, totalCount);
+    } catch (error) {
+      console.error("Error fetching and transforming form definitions:", error);
+      return { forms: [], limit: 5, pageNo: 1, totalCount: 0 };
+    }
+  }
+
+  /**
+   * Transforms raw form definitions into the required format.
+   */
+  private static transformFormDefinitions(
+    forms: IndividualFormDefinition[],
+    totalCount: number
+  ): {
+    forms: {
+      description: string;
+      formId: string;
+      formName: string;
+      formType: string;
+      id: string;
+      modified: string;
+      processKey: string;
+    }[];
+    limit: number;
+    pageNo: number;
+    totalCount: number;
+  } {
+    const transformedForms = forms.map((form, index) => ({
+      description: form.title || "No Description",
+      formId: form._id,
+      formName: form.name,
+      formType: form.type,
+      id: (index + 1).toString(),
+      modified: form.modified,
+      processKey: "Defaultflow",
+    }));
+
+    return {
+      forms: transformedForms,
+      limit: 5,
+      pageNo: 1,
+      totalCount: totalCount,
+    };
+  }
 
   public static async fetchStaticDataFromTable(
     tableName: string
@@ -170,7 +248,7 @@ class DBService {
 
       // Fetch all records from the table
       const data = await table.toArray();
-  
+
       if (data.length === 0) {
         console.log(`No data found in table ${tableName}.`);
       }
@@ -180,6 +258,6 @@ class DBService {
       console.error(`Error fetching data from table ${tableName}:`, error);
       throw error; // Propagate the error so it can be handled by the caller
     }
-  }  
+  }
 }
 export default DBService;
