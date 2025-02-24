@@ -1,7 +1,8 @@
 import { rsbcDb } from "./rsbcDb";
-import { ffDb } from "./ffDb";
+import { ffDb, IndividualFormDefinition } from "./ffDb";
 import { StaticTables } from "../constants/constants";
 import testFormData from "./testFormData.json";
+import { transformFinalSubmissionData, transformFormDefinitionData } from "../helpers/helperDbServices";
 
 class DBFetchService {
   
@@ -48,7 +49,7 @@ class DBFetchService {
         await ffDb.open();
 
         // Get reference to the formDefinition table
-        const table = ffDb["formDefinition"];
+        const table = ffDb["formDefinitions"];
 
         if (!table) {
             throw new Error("Table formDefinition not found in IndexedDB.");
@@ -56,13 +57,14 @@ class DBFetchService {
 
         // Fetch row by ID
         const data = await table.get(formId);
+        const finalData = transformFormDefinitionData(data);
 
-        if (!data) {
+        if (!finalData) {
             console.log(`No record found with id: ${formId}`);
             return null;
         }
 
-        return data;
+        return finalData;
     } catch (error) {
         console.error(`Error fetching data from formDefinition with id ${formId}:`, error);
         throw error;
@@ -151,12 +153,96 @@ class DBFetchService {
             console.log(`No record found with id: ${submissionId}`);
             return null;
         }
+        const updatedSubmission = transformFinalSubmissionData(submission);
 
-        return submission;
+        return updatedSubmission;
     } catch (error) {
         console.error(`Error fetching data from offlineSubmission with id ${submissionId}:`, error);
         throw error;
     }
+  }
+  /**
+     * Retrieves all form definitions from IndexedDB.
+     */
+  private static async getFormDefinitions(): Promise<IndividualFormDefinition[]> {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      return await ffDb.formDefinitions.toArray();
+    } catch (error) {
+      console.error("Error retrieving form definitions from IndexedDB:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Fetches form definitions from IndexedDB and transforms them into the required format.
+   */
+  public static async getTransformedForms(): Promise<{
+    forms: {
+      description: string;
+      formId: string;
+      formName: string;
+      formType: string;
+      id: string;
+      modified: string;
+      processKey: string;
+    }[];
+    limit: number;
+    pageNo: number;
+    totalCount: number;
+  }> {
+    try {
+      const forms = await this.getFormDefinitions();
+
+      // Get total count from the array length
+      const totalCount = forms.length;
+
+      // Transform and return the data
+      const finalData = this.transformFormDefinitions(forms, totalCount);
+      return finalData;
+    } catch (error) {
+      console.error("Error fetching and transforming form definitions:", error);
+      return { forms: [], limit: 5, pageNo: 1, totalCount: 0 };
+    }
+  }
+  /**
+   * Transforms raw form definitions into the required format.
+   */
+  private static transformFormDefinitions(
+    forms: IndividualFormDefinition[],
+    totalCount: number
+  ): {
+    forms: {
+      description: string;
+      formId: string;
+      formName: string;
+      formType: string;
+      id: string;
+      modified: string;
+      processKey: string;
+    }[];
+    limit: number;
+    pageNo: number;
+    totalCount: number;
+  } {
+    const transformedForms = forms.map((form, index) => ({
+      description: form.title || "No Description",
+      formId: form._id,
+      formName: form.name,
+      formType: form.type,
+      id: (index + 1).toString(),
+      modified: form.modified,
+      processKey: "Defaultflow",
+    }));
+
+    return {
+      forms: transformedForms,
+      limit: 5,
+      pageNo: 1,
+      totalCount: totalCount,
+    };
   }
 }
 export default DBFetchService;

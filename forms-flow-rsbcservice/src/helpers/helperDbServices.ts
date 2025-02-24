@@ -62,3 +62,73 @@ export const constructApplicationData = (formId: string, submissionId: string, f
     submissionId: submissionId
   };
 };
+
+const transformSubmissionData = (submission: any) => {
+  try {
+    if (!submission || typeof submission !== "object") {
+      throw new Error("Invalid submission object");
+    }
+
+    const submissionData = submission.submissionData || {};
+    
+    return {
+      access: Array.isArray(submissionData.access) ? submissionData.access : [],
+      owner: submissionData.owner || "",
+      externalIds: Array.isArray(submissionData.externalIds) ? submissionData.externalIds : [],
+      roles: Array.isArray(submissionData.roles) ? submissionData.roles : [],
+      metadata: typeof submissionData.metadata === "object" && submissionData.metadata !== null ? submissionData.metadata : {},
+      form: submission.formId || "",
+      created: submission.created || "",
+      modified: submission.modified || "",
+      data: submission.data || {},
+      _id: submission.localSubmissionId || "",
+    };
+  } catch (error) {
+    console.error("Error in transformSubmissionData:", error);
+    return null; // or return an empty object if needed
+  }
+};
+
+export const transformFinalSubmissionData = (submission: any) => {
+  try {
+    if (!submission || typeof submission !== "object") {
+      throw new Error("Invalid submission object");
+    }
+
+    const submissionData = transformSubmissionData(submission);
+    
+    return {
+      submission: submissionData,
+      formId: submission.formId || "",
+      id: submission.localSubmissionId || "",
+      url: "",
+      lastUpdated: 0,
+      isActive: false,
+      error: ""      
+    };
+  } catch (error) {
+    console.error("Error in transformFinalSubmissionData:", error);
+    return null; // or return an empty object if needed
+  }
+};
+
+export const transformFormDefinitionData = (form: any) => {
+  try {
+    if (!form || typeof form !== "object") {
+      throw new Error("Invalid form object");
+    }    
+    return {
+      form: form,
+      id: form._id || "",
+      url: "",
+      lastUpdated: 0,
+      isActive: false,
+      error: ""      
+    };
+  } catch (error) {
+    console.error("Error in transformFormDefinitionData:", error);
+    return null; // or return an empty object if needed
+  }
+};
+
+

@@ -1,5 +1,5 @@
 import { rsbcDb } from "./rsbcDb";
-import { ffDb } from "./ffDb";
+import { ffDb, IndividualFormDefinition } from "./ffDb";
 import { fetchStaticData } from "../request/staticDataApi";
 import { handleError } from "../helpers/helperServices";
 import { constructApplicationData, constructOfflineSubmissionData } from "../helpers/helperDbServices";
@@ -124,6 +124,23 @@ class DBInsertService {
     }
   }
 
+  public static async saveFormToIndexedDB(form: IndividualFormDefinition): Promise<void> {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+
+      if (!form) {
+        console.warn("No valid form provided.");
+        return;
+      }
+      await ffDb.formDefinitions.put(form);
+      console.log(`Form with ID ${form._id} added or updated in IndexedDB.`);
+    } catch (error) {
+      console.error("Error saving form to IndexedDB:", error);
+    }
+  }
+
   /**
    * Saves FormFlow data to IndexedDB.
    * @param {string} resourceName - The name of the resource.
@@ -154,7 +171,7 @@ class DBInsertService {
           })
           console.log("Form List data saved to IndexedDB.");
           break;
-        case "application":
+        case "applications":
           // await ffDb.application.clear();
           await ffDb.applications.put(data);
           break;
@@ -192,13 +209,13 @@ class DBInsertService {
       // const formData = testFormData;
       const formData = {};
       const submissionData = constructOfflineSubmissionData(data, formId);
-      const applicationData = constructApplicationData(formId, submissionData._id, formData);
+      const applicationData = constructApplicationData(formId, submissionData.localSubmissionId, formData);
       await this.saveFFDataToIndexedDB("offlineSubmission", submissionData);
-      await this.saveFFDataToIndexedDB("application", applicationData);
+      await this.saveFFDataToIndexedDB("applications", applicationData);
     } catch (error) {
       console.error(`Error processing offline submission or application data:`, error);
     }
-  }
+  }   
   
 }
 export default DBInsertService;

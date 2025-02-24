@@ -3,6 +3,30 @@ import Dexie, { Table } from "dexie";
 // Below are formsflow.ai specific interfaces
 // These define the structure of various objects stored in IndexedDB
 
+interface FormAccess {
+  type: string;
+  roles: string[]; // Array of role IDs
+}
+
+export interface IndividualFormDefinition {
+  _id: string;
+  title: string;
+  name: string;
+  path: string;
+  type: string;
+  display: string;
+  tags: string[];
+  isBundle: boolean;
+  access: FormAccess[];
+  submissionAccess: FormAccess[];
+  owner: string;
+  components: Record<string, any>[];
+  created: string;
+  modified: string;
+  machineName: string;
+  parentFormId: string;
+}
+
 interface FormDefinisionList {
   id: string;
   formId: string;
@@ -90,7 +114,7 @@ interface SubmissionData {
 }
 
 // brought localDraftId and localSubmissionId here because,
-//  Dexie does not allow indexes on nested properties like submissionData.localSubmissionId 
+// Dexie does not allow indexes on nested properties like submissionData.localSubmissionId 
 interface OfflineSubmission {
   _id: string;
   formId: string;
@@ -113,7 +137,8 @@ class FormsFlowDB extends Dexie {
   applicationMetaData!: Table<ApplicationMetaData>;
   drafts!: Table<Draft>;
   draftMetaData!: Table<DraftMetaData>;
-  offlineSubmissions!: Table<OfflineSubmission>
+  offlineSubmissions!: Table<OfflineSubmission>;
+  formDefinitions!: Table<IndividualFormDefinition>;
 
   constructor() {
     super("formsflowTables");
@@ -129,7 +154,8 @@ class FormsFlowDB extends Dexie {
       applicationMetaData: "key",
       drafts: "id, applicationId, formId",
       draftMetaData:"key",
-      offlineSubmissions: "_id, formId, type, localSubmissionId, localDraftId",
+      offlineSubmissions: "_id, formId, localSubmissionId, localDraftId, type",
+      formDefinitions: "_id, title, name, path, type, created, modified, machineName, parentFormId"
 
     });
   }
