@@ -2,18 +2,23 @@ import { rsbcDb } from "./rsbcDb";
 import { ffDb } from "./ffDb";
 import { fetchStaticData } from "../request/staticDataApi";
 import { handleError } from "../helpers/helperServices";
-import { constructApplicationData, constructOfflineSubmissionData } from "../helpers/helperDbServices";
+import {
+  constructApplicationData,
+  constructOfflineSubmissionData,
+  constructOfflineSubmissionDraftData,
+} from "../helpers/helperDbServices";
 import { StaticResources } from "../constants/constants";
-import testFormData from "./testFormData.json";
 
 class DBInsertService {
-  
   /**
    * Saves RSBC static data to IndexedDB.
    * @param {string} resourceName - The name of the resource.
    * @param {any} data - The data to be saved.
    */
-  private static async saveRSBCDataToIndexedDB(resourceName: string, data: any) {
+  private static async saveRSBCDataToIndexedDB(
+    resourceName: string,
+    data: any
+  ) {
     try {
       // Check if IndexedDB is available
       if (!rsbcDb) {
@@ -104,12 +109,12 @@ class DBInsertService {
 
       // Create an array of promises for fetching data
       const fetchPromises = StaticResources.map(async (resource) => {
-        try {              
-            await fetchStaticData(
-              resource,
-              (data: any) => this.saveRSBCDataToIndexedDB(resource, data),
-              (error: any) => handleError(error)
-            );          
+        try {
+          await fetchStaticData(
+            resource,
+            (data: any) => this.saveRSBCDataToIndexedDB(resource, data),
+            (error: any) => handleError(error)
+          );
         } catch (error) {
           console.error(`Error processing resource ${resource}:`, error);
         }
@@ -150,23 +155,13 @@ class DBInsertService {
             key: "metadata",
             totalCount: data.totalCount,
             pageNo: data.pageNo,
-            limit: data.limit
-          })
+            limit: data.limit,
+          });
           console.log("Form List data saved to IndexedDB.");
           break;
         case "application":
           // await ffDb.application.clear();
           await ffDb.applications.put(data);
-          break;
-        case "drafts":
-          await ffDb.drafts.clear();
-          await ffDb.drafts.bulkPut(data.drafts);
-          await ffDb.draftMetaData.put({
-            key: "metadata",
-            applicationCount: data.applicationCount,
-            totalCount: data.totalCount,
-          })
-          console.log("Drafts data saved to IndexedDB.");
           break;
         case "offlineSubmission":
           // await ffDb.submission.clear();
@@ -179,26 +174,54 @@ class DBInsertService {
     } catch (error) {
       console.error(`Error saving ${resourceName} to IndexedDB:`, error);
     }
-  }  
-  
+  }
+
   /**
    * Inserts submission data into IndexedDB.
    * @param {any} data - Submission data to be stored.
    * @param {string} formId - Form ID associated with the submission.
    */
-  public static async insertSubmissionData (data: any, formId: string): Promise<void> {
+  public static async insertSubmissionData(
+    data: any,
+    formId: string
+  ): Promise<void> {
     try {
       // const formData = this.fetchOfflineFormById(formId);
       // const formData = testFormData;
       const formData = {};
       const submissionData = constructOfflineSubmissionData(data, formId);
-      const applicationData = constructApplicationData(formId, submissionData._id, formData);
+      const applicationData = constructApplicationData(
+        formId,
+        submissionData._id,
+        formData
+      );
       await this.saveFFDataToIndexedDB("offlineSubmission", submissionData);
       await this.saveFFDataToIndexedDB("application", applicationData);
     } catch (error) {
-      console.error(`Error processing offline submission or application data:`, error);
+      console.error(
+        `Error processing offline submission or application data:`,
+        error
+      );
     }
   }
-  
+
+  public static async saveOfflineDraft(
+    data: any,
+    draftSubmissionId: number
+  ): Promise<void> {
+    try {
+      const applicationData = constructOfflineSubmissionDraftData(
+        data,
+        draftSubmissionId
+      );
+      await this.saveFFDataToIndexedDB("offlineSubmission", applicationData);
+    } catch (error) {
+      console.error(
+        `Error processing offline submission or application data:`,
+        error
+      );
+    }
+  }
 }
+
 export default DBInsertService;

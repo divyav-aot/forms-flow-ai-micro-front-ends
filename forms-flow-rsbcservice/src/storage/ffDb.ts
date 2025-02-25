@@ -10,15 +10,13 @@ interface FormDefinisionList {
   formType: string;
   processKey: string;
   modified: string;
-
 }
 
 interface FormListMetaData {
   key: string;
   totalCount: number;
   pageNo: number;
-  limit: number; 
-
+  limit: number;
 }
 
 interface Application {
@@ -46,21 +44,7 @@ interface ApplicationMetaData {
   draftCount: number;
   totalCount: number;
   pageNo: number;
-  limit: number; 
-
-}
-
-interface Draft {
-  id: number;
-  applicationId: number;
-  formId: string;
-  DraftName: string;
-  created: string;
-  modified: string;
-  data: Record<string, any>; // Since the structure varies, we use a generic key-value object
-  CreatedBy: string;
-  processName: string;
-  formType: string;
+  limit: number;
 }
 
 interface DraftMetaData {
@@ -69,39 +53,38 @@ interface DraftMetaData {
   applicationCount: number;
 }
 
-interface DraftData {
-  CreatedBy: string;
-  DraftName: string;
-  localApplicationId: string;
-  serverDraftId: string; // can be removed if not needed
-  serverApplicationId: string; // can be removed if not needed
-  formType: string;
-  processKey: string;
-  processName: string;
-}
-
 interface SubmissionData {
   owner: string;
   access: any[];
   externalIds: any[];
   roles: any[];
   metadata: Record<string, any>;
-
 }
 
 // brought localDraftId and localSubmissionId here because,
-//  Dexie does not allow indexes on nested properties like submissionData.localSubmissionId 
+//  Dexie does not allow indexes on nested properties like submissionData.localSubmissionId
 interface OfflineSubmission {
   _id: string;
-  formId: string;
-  data: Record<string, any>;
-  localDraftId?: string;
+  formId: string; // the same for draft and submission
+  data: Record<string, any>; // the same for draft and submission
   draftData: DraftData;
   submissionData: SubmissionData;
   localSubmissionId?: string;
-  created: string;
-  modified: string;
+  created: string; // the same for draft and submission
+  modified: string; // the same for draft and submission
   type: string;
+  localApplicationId: string; // local generated
+  localDraftId: string; // local generated
+  serverDraftId: string; // Server Draft id generated
+  serverApplicationId: string; // Server Draft id generated
+}
+
+interface DraftData {
+  CreatedBy: string;
+  DraftName: string;
+  formType: string;
+  processKey: string;
+  processName: string;
 }
 
 // Database class extending Dexie to manage IndexedDB storage
@@ -111,9 +94,9 @@ class FormsFlowDB extends Dexie {
   formListMetaData!: Table<FormListMetaData>;
   applications!: Table<Application>;
   applicationMetaData!: Table<ApplicationMetaData>;
-  drafts!: Table<Draft>;
+  // drafts!: Table<Draft>;
   draftMetaData!: Table<DraftMetaData>;
-  offlineSubmissions!: Table<OfflineSubmission>
+  offlineSubmissions!: Table<OfflineSubmission>;
 
   constructor() {
     super("formsflowTables");
@@ -123,14 +106,14 @@ class FormsFlowDB extends Dexie {
     //requires a migration you need to add a .upgrade(() => {}) to the end of the version to handle how the data is migrated.
 
     this.version(1).stores({
-      formDefinitionList: "id, formId, formName, formType, processKey, modified",
+      formDefinitionList:
+        "id, formId, formName, formType, processKey, modified",
       formListMetaData: "key",
       applications: "id, formId, submissionId",
       applicationMetaData: "key",
       drafts: "id, applicationId, formId",
-      draftMetaData:"key",
+      draftMetaData: "key",
       offlineSubmissions: "_id, formId, type, localSubmissionId, localDraftId",
-
     });
   }
 }
