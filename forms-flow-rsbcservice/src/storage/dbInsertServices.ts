@@ -24,7 +24,7 @@ class OfflineSaveService {
       if (!data || data.length === 0) {
         throw new Error(`No valid data provided for ${resourceName}.`);
       }
-
+      // resourceName: static table names
       switch (resourceName) {
         case "agencies":
           await rsbcDb.agencies.clear();
