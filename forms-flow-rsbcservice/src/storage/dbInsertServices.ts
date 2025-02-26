@@ -2,11 +2,11 @@ import { rsbcDb } from "./rsbcDb";
 import { ffDb, IndividualFormDefinition } from "./ffDb";
 import { fetchStaticData } from "../request/staticDataApi";
 import { handleError } from "../helpers/helperServices";
-import { constructApplicationData, constructOfflineSubmissionData } from "../helpers/helperDbServices";
 import { StaticResources } from "../constants/constants";
-import testFormData from "./testFormData.json";
+import OfflineFetchService from "./dbFetchServices";
+import DBServiceHelper from "../helpers/helperDbServices";
 
-class DBInsertService {
+class OfflineSaveService {
   
   /**
    * Saves RSBC static data to IndexedDB.
@@ -124,7 +124,7 @@ class DBInsertService {
     }
   }
 
-  public static async saveFormToIndexedDB(form: IndividualFormDefinition): Promise<void> {
+  public static async saveOfflineFormDefinition(form: IndividualFormDefinition): Promise<void> {
     try {
       if (!ffDb) {
         throw new Error("IndexedDB is not available.");
@@ -205,11 +205,9 @@ class DBInsertService {
    */
   public static async insertSubmissionData (data: any, formId: string): Promise<void> {
     try {
-      // const formData = this.fetchOfflineFormById(formId);
-      // const formData = testFormData;
-      const formData = {};
-      const submissionData = constructOfflineSubmissionData(data, formId);
-      const applicationData = constructApplicationData(formId, submissionData.localSubmissionId, formData);
+      const formData = await OfflineFetchService.fetchOfflineFormById(formId);
+      const submissionData = DBServiceHelper.constructOfflineSubmissionData(data, formId);
+      const applicationData = DBServiceHelper.constructApplicationData(formId, submissionData.localSubmissionId, formData);
       await this.saveFFDataToIndexedDB("offlineSubmission", submissionData);
       await this.saveFFDataToIndexedDB("applications", applicationData);
     } catch (error) {
@@ -218,4 +216,4 @@ class DBInsertService {
   }   
   
 }
-export default DBInsertService;
+export default OfflineSaveService;
