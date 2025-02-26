@@ -96,7 +96,7 @@ interface DraftMetaData {
 interface DraftData {
   CreatedBy: string;
   DraftName: string;
-  localApplicationId: string;
+  localApplicationId: number;
   serverDraftId: string; // can be removed if not needed
   serverApplicationId: string; // can be removed if not needed
   formType: string;
@@ -115,7 +115,7 @@ interface SubmissionData {
 
 // brought localDraftId and localSubmissionId here because,
 // Dexie does not allow indexes on nested properties like submissionData.localSubmissionId 
-interface OfflineSubmission {
+export interface OfflineSubmission {
   _id: string;
   formId: string;
   data: Record<string, any>;
@@ -126,6 +126,11 @@ interface OfflineSubmission {
   created: string;
   modified: string;
   type: string;
+}
+
+interface ActiveForm {
+  localDraftId: string;
+  serverDraftId?: string;
 }
 
 // Database class extending Dexie to manage IndexedDB storage
@@ -139,6 +144,7 @@ class FormsFlowDB extends Dexie {
   draftMetaData!: Table<DraftMetaData>;
   offlineSubmissions!: Table<OfflineSubmission>;
   formDefinitions!: Table<IndividualFormDefinition>;
+  activeForm!: Table<ActiveForm>;
 
   constructor() {
     super("formsflowTables");
@@ -155,7 +161,8 @@ class FormsFlowDB extends Dexie {
       drafts: "id, applicationId, formId",
       draftMetaData:"key",
       offlineSubmissions: "_id, formId, localSubmissionId, localDraftId, type",
-      formDefinitions: "_id, title, name, path, type, created, modified, machineName, parentFormId"
+      formDefinitions: "_id, title, name, path, type, created, modified, machineName, parentFormId",
+      activeForm: "localDraftId, serverDraftId"
 
     });
   }

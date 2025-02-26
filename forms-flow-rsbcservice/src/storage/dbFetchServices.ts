@@ -206,6 +206,41 @@ class OfflineFetchService {
       return { forms: [], limit: 5, pageNo: 1, totalCount: 0 };
     }
   }
+
+
+  /**
+   * Fetches offline drafts from the "offlineSubmission" table.
+   * 
+   * @returns A promise resolving to the draft data or null if not found.
+   * @throws Error if IndexedDB is unavailable or the table is missing.
+   */
+  public static async fetchOfflineDrafts(): Promise<any> {
+    try {
+        if (!ffDb) {
+            throw new Error("IndexedDB is not available.");
+        }
+        await ffDb.open();
+
+        // Get reference to the formDefinition table
+        const offlineSubmissions = ffDb["offlineSubmissions"];
+
+        if (!offlineSubmissions) {
+            throw new Error("Table offlineSubmission not found in IndexedDB.");
+        }
+
+        // Fetch drafts by type      
+        const drafts = await offlineSubmissions.where("type").equals("draft").toArray();
+        const transformedDrafts = DBServiceHelper.tranformOfflineDrafts(drafts);
+        if (!transformedDrafts || transformedDrafts.length === 0) {
+          console.log("No draft records found.");
+          return {drafts: [], applicationCount: 0, totalCount: 0}; // totalCount = draftsCount, applicationCount=submissionCount
+        }
+        return transformedDrafts;
+    } catch (error) {
+        console.error(`Error fetching data from offlineSubmission with offline draft information :`, error);
+        throw error;
+    }
+  }
   
 }
 export default OfflineFetchService;

@@ -12,6 +12,13 @@ class DBServiceHelper {
     }
 
     /**
+     * Generates a unique number.
+     * @returns {number} - A new random number.
+     */
+    private static generateRandomNumber(): number {
+        return Math.floor(Math.random() * 1000000000);
+    }
+    /**
      * Retrieves user details from storage.
      * @returns {any} - Parsed user details.
      */
@@ -68,7 +75,7 @@ class DBServiceHelper {
      */
     public static constructApplicationData(formId: string, submissionId: string, formData: any): any {
         const userDetails = this.getUserDetails();
-        const randomId = Math.floor(Math.random() * 1000000000);
+        const randomId = this.generateRandomNumber();
         const now = new Date().toISOString();
         const applicationName = formData?.form?.title;
 
@@ -208,6 +215,84 @@ class DBServiceHelper {
       limit: 5,
       pageNo: 1,
       totalCount: totalCount,
+    };
+  }
+
+  /**
+     * Constructs offline draft data.
+     * @param {any} draft - The draft data.
+     * @returns {object} - The constructed offline submission data.
+     */
+  public static constructOfflineDraftData(draft: any, formId: string, formData: any): any {
+    const userDetails = this.getUserDetails();
+    const _id = this.generateGUID();
+    const localDraftId = this.generateRandomNumber();
+    const CreatedBy = userDetails?.preferred_username;
+    const DraftName = "";
+    const localApplicationId = this.generateRandomNumber();
+    const serverDraftId="";
+    const serverApplicationId="";
+    const formType = formData?.form?.type || "";
+    const processKey = "";
+    const processName = "";
+    const now = new Date().toISOString();
+    const draftData = {
+        CreatedBy: CreatedBy,
+        DraftName: DraftName,
+        localApplicationId: localApplicationId,
+        serverDraftId: serverDraftId,
+        serverApplicationId: serverApplicationId,
+        formType: formType,
+        processKey: processKey,
+        processName: processName
+    }
+    const res = this.constructDraftResponse(localApplicationId, localDraftId, now, draft?.data, _id);
+    const inputDraft = {
+        _id,
+        localDraftId: localDraftId,
+        submissionData: {},
+        draftData: draftData,
+        created: now,
+        modified: now,
+        data: draft?.data,
+        formId,
+        type: "draft"
+    };
+    return {
+        inputDraft,
+        res
+    }
+  }
+
+  private static constructDraftResponse(localApplicationId: number, localDraftId: number, created: string, data: any, _id: string): any {
+    return {
+        applicationId: localApplicationId,
+        id: localDraftId,
+        created: created,
+        modified: created,
+        data: data,
+        _id: _id
+    }
+  }
+
+  public static tranformOfflineDrafts(drafts: any): any {
+
+    const transformedDrafts = drafts.map((draft: any) => ({
+        CreatedBy: draft.draftData?.CreatedBy || "Unknown",
+        DraftName: draft.draftData?.DraftName || "Untitled Draft",
+        applicationId: draft.draftData?.localApplicationId || null,
+        created: draft.created || "",
+        data: draft.data || {},
+        formId: draft.formId || "",
+        formType: draft.draftData?.formType || "",
+        id: draft.localDraftId || "",
+        modified: draft.modified || "",
+        processName: draft.draftData?.processName || "",
+    }));
+    return {
+        totalCount: drafts.length,
+        drafts: transformedDrafts,
+        applicationCount: drafts.length,
     };
   }
 }

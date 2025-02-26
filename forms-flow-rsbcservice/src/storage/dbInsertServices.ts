@@ -213,7 +213,26 @@ class OfflineSaveService {
     } catch (error) {
       console.error(`Error processing offline submission or application data:`, error);
     }
-  }   
+  }
+
+  /**
+   * Inserts submission data into IndexedDB.
+   * @param {any} draft - Submission data to be stored.
+   */
+  public static async insertOfflineDraftData (draft: any): Promise<void> {
+    try {
+      const formId = draft?.formId;
+      if (!formId) {
+        console.warn("No valid formId found. Using empty formData.");
+      }
+      const formData = formId ? await OfflineFetchService.fetchOfflineFormById(formId) : {};
+      const offlineDraft = DBServiceHelper.constructOfflineDraftData(draft, formId, formData);
+      await this.saveFFDataToIndexedDB("offlineSubmission", offlineDraft?.inputDraft);
+      return offlineDraft?.res;
+    } catch (error) {
+      console.error("Error processing offline submission or application data:", error);
+    }
+  }
   
 }
 export default OfflineSaveService;
