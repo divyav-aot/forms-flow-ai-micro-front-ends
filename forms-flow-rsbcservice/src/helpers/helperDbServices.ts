@@ -16,7 +16,7 @@ class DBServiceHelper {
      * @returns {number} - A new random number.
      */
     private static generateRandomNumber(): number {
-        return Math.floor(Math.random() * 1000000000);
+        return window.crypto.getRandomValues(new Uint32Array(1))[0];;
     }
     /**
      * Retrieves user details from storage.
