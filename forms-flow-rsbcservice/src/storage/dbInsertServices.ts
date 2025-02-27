@@ -146,7 +146,7 @@ class OfflineSaveService {
    * @param {string} resourceName - The name of the resource.
    * @param {any} data - The data to be saved.
    */
-  private static async saveFFDataToIndexedDB(resourceName: string, data: any) {
+  public static async saveFFDataToIndexedDB(resourceName: string, data: any) {
     try {
       // Check if IndexedDB is available
       if (!ffDb) {
@@ -190,6 +190,11 @@ class OfflineSaveService {
           await ffDb.offlineSubmissions.put(data);
           console.log("Offline submission data saved to IndexedDB.");
           break;
+        case "activeForm":
+          await ffDb.activeForm.clear();
+          await ffDb.activeForm.put(data);
+          console.log("Offline activeForm data saved to IndexedDB.");
+          break;
         default:
           console.log(`No matching table found for resource: ${resourceName}`);
       }
@@ -203,7 +208,7 @@ class OfflineSaveService {
    * @param {any} data - Submission data to be stored.
    * @param {string} formId - Form ID associated with the submission.
    */
-  public static async insertSubmissionData (data: any, formId: string): Promise<void> {
+  public static async insertOfflineSubmissionData (data: any, formId: string): Promise<void> {
     try {
       const formData = await OfflineFetchService.fetchOfflineFormById(formId);
       const submissionData = DBServiceHelper.constructOfflineSubmissionData(data, formId);
@@ -228,9 +233,14 @@ class OfflineSaveService {
       const formData = formId ? await OfflineFetchService.fetchOfflineFormById(formId) : {};
       const offlineDraft = DBServiceHelper.constructOfflineDraftData(draft, formId, formData);
       await this.saveFFDataToIndexedDB("offlineSubmission", offlineDraft?.inputDraft);
+      const activeFormData = {
+        localDraftId: offlineDraft?.inputDraft?.localDraftId,
+        serverDraftId: ""
+      };
+      await this.saveFFDataToIndexedDB("activeForm", activeFormData);
       return offlineDraft?.res;
     } catch (error) {
-      console.error("Error processing offline submission or application data:", error);
+      console.error("Error processing offline draft or application data:", error);
     }
   }
   

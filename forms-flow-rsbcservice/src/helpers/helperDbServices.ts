@@ -183,118 +183,136 @@ class DBServiceHelper {
     /**
    * Transforms raw form definitions into the required format.
    */
-  public static transformFormDefinitions(
-    forms: IndividualFormDefinition[],
-    totalCount: number
-  ): {
-    forms: {
-      description: string;
-      formId: string;
-      formName: string;
-      formType: string;
-      id: string;
-      modified: string;
-      processKey: string;
-    }[];
-    limit: number;
-    pageNo: number;
-    totalCount: number;
-  } {
-    const transformedForms = forms.map((form, index) => ({
-      description: form.title || "No Description",
-      formId: form._id,
-      formName: form.name,
-      formType: form.type,
-      id: (index + 1).toString(),
-      modified: form.modified,
-      processKey: "Defaultflow",
-    }));
+    public static transformFormDefinitions(
+        forms: IndividualFormDefinition[],
+        totalCount: number
+    ): {
+        forms: {
+        description: string;
+        formId: string;
+        formName: string;
+        formType: string;
+        id: string;
+        modified: string;
+        processKey: string;
+        }[];
+        limit: number;
+        pageNo: number;
+        totalCount: number;
+    } {
+        const transformedForms = forms.map((form, index) => ({
+        description: form.title || "No Description",
+        formId: form._id,
+        formName: form.name,
+        formType: form.type,
+        id: (index + 1).toString(),
+        modified: form.modified,
+        processKey: "Defaultflow",
+        }));
 
-    return {
-      forms: transformedForms,
-      limit: 5,
-      pageNo: 1,
-      totalCount: totalCount,
-    };
-  }
-
-  /**
-     * Constructs offline draft data.
-     * @param {any} draft - The draft data.
-     * @returns {object} - The constructed offline submission data.
-     */
-  public static constructOfflineDraftData(draft: any, formId: string, formData: any): any {
-    const userDetails = this.getUserDetails();
-    const _id = this.generateGUID();
-    const localDraftId = this.generateRandomNumber();
-    const CreatedBy = userDetails?.preferred_username;
-    const DraftName = "";
-    const localApplicationId = this.generateRandomNumber();
-    const serverDraftId="";
-    const serverApplicationId="";
-    const formType = formData?.form?.type || "";
-    const processKey = "";
-    const processName = "";
-    const now = new Date().toISOString();
-    const draftData = {
-        CreatedBy: CreatedBy,
-        DraftName: DraftName,
-        localApplicationId: localApplicationId,
-        serverDraftId: serverDraftId,
-        serverApplicationId: serverApplicationId,
-        formType: formType,
-        processKey: processKey,
-        processName: processName
+        return {
+        forms: transformedForms,
+        limit: 5,
+        pageNo: 1,
+        totalCount: totalCount,
+        };
     }
-    const res = this.constructDraftResponse(localApplicationId, localDraftId, now, draft?.data, _id);
-    const inputDraft = {
-        _id,
-        localDraftId: localDraftId,
-        submissionData: {},
-        draftData: draftData,
-        created: now,
-        modified: now,
-        data: draft?.data,
-        formId,
-        type: "draft"
-    };
-    return {
-        inputDraft,
-        res
+
+    /**
+         * Constructs offline draft data.
+         * @param {any} draft - The draft data.
+         * @returns {object} - The constructed offline submission data.
+         */
+    public static constructOfflineDraftData(draft: any, formId: string, formData: any): any {
+        const userDetails = this.getUserDetails();
+        const _id = this.generateGUID();
+        const localDraftId = this.generateRandomNumber();
+        const CreatedBy = userDetails?.preferred_username;
+        const DraftName = "";
+        const localApplicationId = this.generateRandomNumber();
+        const serverDraftId="";
+        const serverApplicationId="";
+        const formType = formData?.form?.type || "";
+        const processKey = "";
+        const processName = "";
+        const now = new Date().toISOString();
+        const draftData = {
+            CreatedBy: CreatedBy,
+            DraftName: DraftName,
+            localApplicationId: localApplicationId,
+            serverDraftId: serverDraftId,
+            serverApplicationId: serverApplicationId,
+            formType: formType,
+            processKey: processKey,
+            processName: processName
+        }
+        const res = this.constructDraftResponse(localApplicationId, localDraftId, now, draft?.data, _id);
+        const inputDraft = {
+            _id,
+            localDraftId: localDraftId,
+            submissionData: {},
+            draftData: draftData,
+            created: now,
+            modified: now,
+            data: draft?.data,
+            formId,
+            type: "draft"
+        };
+        return {
+            inputDraft,
+            res
+        }
     }
-  }
 
-  private static constructDraftResponse(localApplicationId: number, localDraftId: number, created: string, data: any, _id: string): any {
-    return {
-        applicationId: localApplicationId,
-        id: localDraftId,
-        created: created,
-        modified: created,
-        data: data,
-        _id: _id
+    private static constructDraftResponse(localApplicationId: number, localDraftId: number, created: string, data: any, _id: string): any {
+        return {
+            applicationId: localApplicationId,
+            id: localDraftId,
+            created: created,
+            modified: created,
+            data: data,
+            _id: _id
+        }
     }
-  }
 
-  public static tranformOfflineDrafts(drafts: any): any {
+    public static tranformOfflineDrafts(drafts: any): any {
 
-    const transformedDrafts = drafts.map((draft: any) => ({
-        CreatedBy: draft.draftData?.CreatedBy || "Unknown",
-        DraftName: draft.draftData?.DraftName || "Untitled Draft",
-        applicationId: draft.draftData?.localApplicationId || null,
-        created: draft.created || "",
-        data: draft.data || {},
-        formId: draft.formId || "",
-        formType: draft.draftData?.formType || "",
-        id: draft.localDraftId || "",
-        modified: draft.modified || "",
-        processName: draft.draftData?.processName || "",
-    }));
-    return {
-        totalCount: drafts.length,
-        drafts: transformedDrafts,
-        applicationCount: drafts.length,
-    };
-  }
+        const transformedDrafts = drafts.map((draft: any) => ({
+            CreatedBy: draft.draftData?.CreatedBy || "Unknown",
+            DraftName: draft.draftData?.DraftName || "Untitled Draft",
+            applicationId: draft.draftData?.localApplicationId || null,
+            created: draft.created || "",
+            data: draft.data || {},
+            formId: draft.formId || "",
+            formType: draft.draftData?.formType || "",
+            id: draft.localDraftId || "",
+            modified: draft.modified || "",
+            processName: draft.draftData?.processName || "",
+        }));
+        return {
+            totalCount: drafts.length,
+            drafts: transformedDrafts,
+            applicationCount: drafts.length,
+        };
+    }
+
+    public static constructUpdateOfflineSubmissionData(draft: any, newSubmissionData: any): any {
+        // Update the required fields from newSubmissionData
+        draft.data = newSubmissionData.data;
+        draft.localSubmissionId = this.generateGUID();
+        draft.modified = newSubmissionData.modified || new Date().toISOString();
+        draft.type = "application";
+        draft.created = newSubmissionData.created || draft.created; // Preserve original created date if not provided
+
+        // Update submissionData structure
+        draft.submissionData = {
+            access: newSubmissionData.access || [],
+            externalIds: newSubmissionData.externalIds || [],
+            roles: newSubmissionData.roles || [],
+            metadata: newSubmissionData.metadata || {}
+        };
+        return draft;
+    }
 }
 
 export default DBServiceHelper;
