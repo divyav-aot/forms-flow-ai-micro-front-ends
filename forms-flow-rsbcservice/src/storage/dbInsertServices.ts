@@ -6,7 +6,7 @@ import { StaticResources } from "../constants/constants";
 import OfflineFetchService from "./dbFetchServices";
 import DBServiceHelper from "../helpers/helperDbServices";
 import { fetchFormIDs } from "../request/formIdApi";
-import { FORM_ID_12HOUR_LIMIT, FORM_ID_24HOUR_LIMIT, FORM_ID_VI_LIMIT } from "./config";
+import { REACT_APP_FORM_ID_12HOUR_LIMIT, REACT_APP_FORM_ID_24HOUR_LIMIT, REACT_APP_FORM_ID_VI_LIMIT } from "./config";
 
 class OfflineSaveService {
   
@@ -234,16 +234,16 @@ class OfflineSaveService {
         return acc;
       }, {});
 
-      const required12Hour = Math.max(0, FORM_ID_12HOUR_LIMIT - (countByFormType["12Hour"] || 0));
-      const required24Hour = Math.max(0, FORM_ID_24HOUR_LIMIT - (countByFormType["24Hour"] || 0));
-      const requiredVI = Math.max(0, FORM_ID_VI_LIMIT - (countByFormType["VI"] || 0));
+      const required12Hour = Math.max(0, REACT_APP_FORM_ID_12HOUR_LIMIT - (countByFormType["12Hour"] || 0));
+      const required24Hour = Math.max(0, REACT_APP_FORM_ID_24HOUR_LIMIT - (countByFormType["24Hour"] || 0));
+      const requiredVI = Math.max(0, REACT_APP_FORM_ID_VI_LIMIT - (countByFormType["VI"] || 0));
       try {
         const requiredIds = {
           "12Hour": required12Hour,
           "24Hour": required24Hour,
           "VI": requiredVI,
         };
-        const now_ts = new Date().toUTCString()
+
         await fetchFormIDs(
           requiredIds,
           async (data: any) => {
@@ -255,8 +255,7 @@ class OfflineSaveService {
               lease_expiry: item.lease_expiry,
               printed_timestamp: item.printed_timestamp,
               spoiled_timestamp: item.spoiled_timestamp,
-              created: now_ts,
-              last_updated: now_ts,
+              created: new Date().toISOString()
             }));
             if(formIdData && formIdData.length > 0){
               await this._saveForIdDataToIndexedDB(formIdData);
@@ -295,7 +294,7 @@ class OfflineSaveService {
       if (!form) {
         throw new Error(`Form with ID ${formId} and type ${formType} not found.`);
       }
-      await rsbcDb.formID.update(form.id, { leased: true, last_updated: new Date().toUTCString() });
+      await rsbcDb.formID.update(form.id, { leased: true});
     } catch (error) {
       console.error(`Error updating lease status in IndexedDB:`, error);
     }
