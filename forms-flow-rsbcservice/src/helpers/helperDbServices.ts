@@ -228,7 +228,7 @@ class DBServiceHelper {
         const _id = this.generateGUID();
         const localDraftId = this.generateRandomNumber();
         const CreatedBy = userDetails?.preferred_username;
-        const DraftName = "";
+        const DraftName = formData?.form?.title;
         const localApplicationId = this.generateRandomNumber();
         const serverDraftId="";
         const serverApplicationId="";
