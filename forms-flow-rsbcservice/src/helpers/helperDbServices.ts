@@ -1,5 +1,5 @@
 import { StorageService } from "@formsflow/service";
-import { IndividualFormDefinition } from "../storage/ffDb";
+import { IndividualFormDefinition, OfflineSubmission } from "../storage/ffDb";
 
 class DBServiceHelper {
     
@@ -312,6 +312,22 @@ class DBServiceHelper {
             metadata: newSubmissionData.metadata || {}
         };
         return draft;
+    }
+
+    public static transformEditDraftData(draft: OfflineSubmission): any {
+        return {
+            CreatedBy: draft.draftData.CreatedBy,
+            DraftName: draft.draftData.DraftName,
+            applicationId: draft.draftData.localApplicationId,
+            created: draft.created,
+            data: draft.data,
+            formId: draft.formId,
+            formType: draft.draftData.formType,
+            id: draft.localDraftId,
+            modified: draft.modified,
+            processKey: draft.draftData.processKey,
+            processName: draft.draftData.processName,
+          };
     }
 }
 
