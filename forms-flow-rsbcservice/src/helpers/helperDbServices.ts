@@ -268,6 +268,7 @@ class DBServiceHelper {
         return {
             applicationId: localApplicationId,
             id: localDraftId,
+            localDraftId,
             created: created,
             modified: created,
             data: data,
