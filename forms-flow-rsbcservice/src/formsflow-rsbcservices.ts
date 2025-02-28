@@ -2,6 +2,7 @@
 import OfflineFetchService from "./storage/dbFetchServices";
 import OfflineSaveService from "./storage/dbInsertServices";
 import OfflineEditService from "./storage/dbUpdateServices";
+import OfflineDeleteService from "./storage/dbDeleteServices";
 import RSBCImage from "./component/RSBCImage/RSBCImage";
 
-export { OfflineFetchService,  OfflineSaveService, OfflineEditService, RSBCImage};
+export { OfflineFetchService,  OfflineSaveService, OfflineEditService, OfflineDeleteService, RSBCImage};

@@ -1,5 +1,5 @@
 import { rsbcDb } from "./rsbcDb";
-import { ffDb, IndividualFormDefinition } from "./ffDb";
+import { ffDb, IndividualFormDefinition, ActiveForm } from "./ffDb";
 import { fetchStaticData } from "../request/staticDataApi";
 import { handleError } from "../helpers/helperServices";
 import { StaticResources } from "../constants/constants";
@@ -241,6 +241,35 @@ class OfflineSaveService {
       console.error("Error processing offline draft or application data:", error);
     }
   }
+
+  // This will insert either localDraftId alone or (localDraftId, serverDraftId) together
+  public static async insertDataIntoActiveFormTable(
+    data: ActiveForm
+  ): Promise<{ status: string; message?: string }> {
+    try {
+        if (!ffDb) {
+            throw new Error("IndexedDB is not available.");
+        }
+        await ffDb.open();
+
+        // Get reference to the specified table
+        const table = ffDb["activeForm"];
+
+        if (!table) {
+            throw new Error(`Table activeForm not found in IndexedDB.`);
+        }
+
+        // Insert the record into IndexedDB
+        await table.clear();
+        await table.put(data);
+
+        return { status: "success", message: `Data inserted into activeForm successfully.` };
+    } catch (error) {
+        console.error(`Error inserting data into activeForm:`, error);
+        return { status: "failure", message: error.message };
+    }
+  }
+
   
 }
 export default OfflineSaveService;

@@ -5,8 +5,14 @@ import OfflineSaveService from "./dbInsertServices";
 
 class OfflineEditService {
   
-  public static async updateOfflineDraftData(localDraftId: string, newData: Record<string, any>): Promise<{ status: string; error?: string }> {
+  public static async updateOfflineDraftData(draftId: string, newData: Record<string, any>): Promise<{ status: string; error?: string }> {
     try {
+        const localDraftId = Number(draftId);
+
+        if (isNaN(localDraftId)) {
+          console.error("Invalid draftId: Not a valid number");
+          return null;
+        }
         if (!ffDb) {
             throw new Error("IndexedDB is not available.");
         }
@@ -42,7 +48,7 @@ class OfflineEditService {
 
         return { status: "success" };
     } catch (error) {
-        console.error(`Error updating draft data for localDraftId ${localDraftId}:`, error);
+        console.error(`Error updating draft data for localDraftId ${draftId}:`, error);
         return { status: "error", error: error.message };
     }
   }
@@ -60,10 +66,16 @@ class OfflineEditService {
         data: Record<string, any>;
         _id: string;
     },
-    localDraftId: string,
+    draftId: string,
     formId: string
-): Promise<{ status: string; error?: string }> {
+): Promise<{ status: string; message?: string }> {
     try {
+        const localDraftId = Number(draftId);
+
+        if (isNaN(localDraftId)) {
+          console.error("Invalid draftId: Not a valid number");
+          return { status: "error", message: `Invalid draftId: Not a valid number` };
+        }
         if (!ffDb) {
             throw new Error("IndexedDB is not available.");
         }
@@ -83,7 +95,7 @@ class OfflineEditService {
             .first();
 
         if (!draft) {
-            return { status: "failure", error: `No draft found with localDraftId: ${localDraftId}` };
+            return { status: "failure", message: `No draft found with localDraftId: ${localDraftId}` };
         }
 
         // Update the required fields from newSubmissionData
@@ -95,14 +107,57 @@ class OfflineEditService {
         const applicationData = DBServiceHelper.constructApplicationData(formId, draft.localSubmissionId, formData);
         await OfflineSaveService.saveFFDataToIndexedDB("applications", applicationData);
         await ffDb.activeForm.clear();
-        console.log(`Submission with localDraftId ${localDraftId} updated successfully.`);
-        return { status: "success" };
+        return { status: "success", message: "Submission with localDraftId ${localDraftId} updated successfully." };
     } catch (error) {
-        console.error(`Error updating submission data for localDraftId ${localDraftId}:`, error);
-        return { status: "failure", error: error.message };
+        console.error(`Error updating submission data for localDraftId ${draftId}:`, error);
+        return { status: "failure", message: error.message };
     }
   }
 
+  public static async updateActiveFormTable(
+    updateColumn: string,
+    updateValue: string,
+    whereColumn: string,
+    whereValue: string
+    ): Promise<{ status: string; message?: string }> {
+        try {
+            const localUpdateValue = Number(updateValue);
+            const localWhereValue = Number(whereValue);
 
+            if (isNaN(localUpdateValue) || isNaN(localWhereValue)) {
+              console.error("Invalid updateValue/whereValue: Not a valid number");
+              return null;
+            }
+            if (!ffDb) {
+                throw new Error("IndexedDB is not available.");
+            }
+            await ffDb.open();
+
+            // Get reference to the specified table
+            const table = ffDb["activeForm"];
+
+            if (!table) {
+                throw new Error(`Table activeForm not found in IndexedDB.`);
+            }
+
+            // Find the record matching the whereColumn condition
+            const record = await table.where(whereColumn).equals(localWhereValue).first();
+
+            if (!record) {
+                return { status: "failure", message: `No record found with ${whereColumn}: ${whereValue}` };
+            }
+
+            // Update the column value
+            record[updateColumn] = localUpdateValue;
+
+            // Save the updated record back to IndexedDB
+            await table.put(record);
+
+            return { status: "success", message: `Updated ${updateColumn} in activeForm successfully.` };
+        } catch (error) {
+            console.error(`Error updating ${updateColumn} in activeForm:`, error);
+            return { status: "failure", message: error.message };
+        }
+    }
 }
 export default OfflineEditService;

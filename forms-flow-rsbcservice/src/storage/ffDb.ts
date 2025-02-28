@@ -119,7 +119,7 @@ export interface OfflineSubmission {
   _id: string;
   formId: string;
   data: Record<string, any>;
-  localDraftId?: string;
+  localDraftId?: number;
   draftData: DraftData;
   submissionData: SubmissionData;
   localSubmissionId?: string;
@@ -128,7 +128,7 @@ export interface OfflineSubmission {
   type: string;
 }
 
-interface ActiveForm {
+export interface ActiveForm {
   localDraftId: string;
   serverDraftId?: string;
 }
