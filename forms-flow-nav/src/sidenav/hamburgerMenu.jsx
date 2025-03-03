@@ -10,6 +10,7 @@ import Sidebar from "./Sidebar";
 // import hamburger from "./hamburger.svg";
 // import closebutton from "./closebutton.svg";
 import { HamburgerIcon, CloseIcon, ApplicationLogo } from "@formsflow/components";
+import { APPLICATION_NAME } from "../constants/constants";
 function HamburgerMenu({ props }) {
   const [show, setShow] = useState(false);
   const handleClose = () => setShow(false);
