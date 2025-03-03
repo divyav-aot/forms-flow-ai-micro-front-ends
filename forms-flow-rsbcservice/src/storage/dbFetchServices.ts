@@ -231,7 +231,7 @@ class OfflineFetchService {
         // Fetch drafts by type      
         const drafts = await offlineSubmissions.where("type").equals("draft").toArray();
         const transformedDrafts = DBServiceHelper.tranformOfflineDrafts(drafts);
-        if (!transformedDrafts || transformedDrafts.length === 0) {
+        if (!transformedDrafts) {
           console.log("No draft records found.");
           return {drafts: [], applicationCount: 0, totalCount: 0}; // totalCount = draftsCount, applicationCount=submissionCount
         }
@@ -283,6 +283,35 @@ class OfflineFetchService {
         return updatedDraft;
     } catch (error) {
         console.error(`Error fetching data from offlineSubmission with localDraftId ${draftId}:`, error);
+        throw error;
+    }
+  }
+
+  public static async fetchOfflineFormProcessById(formId: string): Promise<any> {
+    try {
+        if (!ffDb) {
+            throw new Error("IndexedDB is not available.");
+        }
+        await ffDb.open();
+
+        // Get reference to the formProcesses table
+        const table = ffDb["formProcesses"];
+
+        if (!table) {
+            throw new Error("Table formProcesses not found in IndexedDB.");
+        }
+
+        // Fetch row by ID
+        const data = await table.get(formId);
+
+        if (!data) {
+            console.log(`No record found with id: ${formId}`);
+            return null;
+        }
+
+        return data;
+    } catch (error) {
+        console.error(`Error fetching data from formProcesses with id ${formId}:`, error);
         throw error;
     }
   }

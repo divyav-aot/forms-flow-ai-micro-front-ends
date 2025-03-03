@@ -5,13 +5,13 @@ import OfflineSaveService from "./dbInsertServices";
 
 class OfflineEditService {
   
-  public static async updateOfflineDraftData(draftId: string, newData: Record<string, any>): Promise<{ status: string; error?: string }> {
+  public static async updateOfflineDraftData(draftId: string, newData: Record<string, any>): Promise<{ status: string; message?: string }> {
     try {
         const localDraftId = Number(draftId);
 
         if (isNaN(localDraftId)) {
           console.error("Invalid draftId: Not a valid number");
-          return null;
+          return { status: "error", message: `Invalid draftId: Not a valid number` };
         }
         if (!ffDb) {
             throw new Error("IndexedDB is not available.");
@@ -32,7 +32,7 @@ class OfflineEditService {
             .first();
 
         if (!draft) {
-          return { status: "error", error: `No draft found with localDraftId: ${localDraftId}` };
+          return { status: "error", message: `No draft found with localDraftId: ${localDraftId}` };
         }
 
         // Merging new data with existing data
@@ -49,7 +49,7 @@ class OfflineEditService {
         return { status: "success" };
     } catch (error) {
         console.error(`Error updating draft data for localDraftId ${draftId}:`, error);
-        return { status: "error", error: error.message };
+        return { status: "error", message: error.message };
     }
   }
 

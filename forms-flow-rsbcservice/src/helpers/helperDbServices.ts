@@ -1,5 +1,5 @@
 import { StorageService } from "@formsflow/service";
-import { IndividualFormDefinition, OfflineSubmission } from "../storage/ffDb";
+import { IndividualFormDefinition, OfflineSubmission, SubmissionData, Application, ApplicationMetaData, Draft } from "../storage/ffDb";
 
 class DBServiceHelper {
     
@@ -31,7 +31,7 @@ class DBServiceHelper {
      * @param {any} submission - The submission data.
      * @returns {object} - The constructed submission data object.
      */
-    private static constructSubmissionDataObject(submission: any): any {
+    private static constructSubmissionDataObject(submission: any): SubmissionData {
         const userDetails = this.getUserDetails();
         return {
             metadata: submission?.metadata,
@@ -48,7 +48,7 @@ class DBServiceHelper {
      * @param {string} formId - The form ID.
      * @returns {object} - The constructed offline submission data.
      */
-    public static constructOfflineSubmissionData(submission: any, formId: string): any {
+    public static constructOfflineSubmissionData(submission: any, formId: string): OfflineSubmission {
         const submissionData = this.constructSubmissionDataObject(submission);
         const _id = this.generateGUID();
         const submissionId = this.generateGUID();
@@ -57,7 +57,6 @@ class DBServiceHelper {
             _id,
             localSubmissionId: submissionId,
             submissionData,
-            draftData: {},
             created: now,
             modified: now,
             data: submission?.data,
@@ -73,7 +72,7 @@ class DBServiceHelper {
      * @param {any} formData - The form data.
      * @returns {object} - The constructed application data.
      */
-    public static constructApplicationData(formId: string, submissionId: string, formData: any): any {
+    public static constructApplicationData(formId: string, submissionId: string, formData: any): Application {
         const userDetails = this.getUserDetails();
         const randomId = this.generateRandomNumber();
         const now = new Date().toISOString();
@@ -96,7 +95,7 @@ class DBServiceHelper {
             processInstanceId: null,
             processKey: null,
             processName: null,
-            processTenent: null,
+            processTenant: null,
             submissionId
         };
     }
@@ -106,7 +105,7 @@ class DBServiceHelper {
      * @param {any} submission - The submission data.
      * @returns {object | null} - Transformed submission data or null on error.
      */
-    private static transformSubmissionData(submission: any): any | null {
+    private static transformSubmissionData(submission: any): ApplicationMetaData | null {
         try {
             if (!submission || typeof submission !== "object") {
                 throw new Error("Invalid submission object");
@@ -133,9 +132,17 @@ class DBServiceHelper {
     /**
      * Transforms final submission data.
      * @param {any} submission - The submission data.
-     * @returns {object | null} - Transformed final submission data or null on error.
+     * @returns {any | null} - Transformed final submission data or null on error.
      */
-    public static transformFinalSubmissionData(submission: any): any | null {
+    public static transformFinalSubmissionData(submission: any): {
+        submission: Record<string, any>;
+        formId: string;
+        id: string;
+        url: string;
+        lastUpdated: number;
+        isActive: boolean;
+        error: string;
+    } | null {
         try {
             if (!submission || typeof submission !== "object") {
                 throw new Error("Invalid submission object");
@@ -161,7 +168,14 @@ class DBServiceHelper {
      * @param {any} form - The form data.
      * @returns {object | null} - Transformed form definition data or null on error.
      */
-    public static transformFormDefinitionData(form: any): any | null {
+    public static transformFormDefinitionData(form: any): {
+        form: Record<string, any>;
+        id: string;
+        url: string;
+        lastUpdated: number;
+        isActive: boolean;
+        error: string;
+    } | null {
         try {
             if (!form || typeof form !== "object") {
                 throw new Error("Invalid form object");
@@ -223,7 +237,10 @@ class DBServiceHelper {
          * @param {any} draft - The draft data.
          * @returns {object} - The constructed offline submission data.
          */
-    public static constructOfflineDraftData(draft: any, formId: string, formData: any): any {
+    public static constructOfflineDraftData(draft: any, formId: string, formData: any): {
+        inputDraft: Record<string, any>;
+        res: Record<string, any>;
+    } {
         const userDetails = this.getUserDetails();
         const _id = this.generateGUID();
         const localDraftId = this.generateRandomNumber();
@@ -264,7 +281,20 @@ class DBServiceHelper {
         }
     }
 
-    private static constructDraftResponse(localApplicationId: number, localDraftId: number, created: string, data: any, _id: string): any {
+    private static constructDraftResponse(
+        localApplicationId: number, 
+        localDraftId: number, 
+        created: string, 
+        data: any, 
+        _id: string): {
+            applicationId: number;
+            id: number;
+            localDraftId: number;
+            created: string;
+            modified: string;
+            data: Record<string, any>; 
+            _id: string;
+        } {
         return {
             applicationId: localApplicationId,
             id: localDraftId,
@@ -276,7 +306,11 @@ class DBServiceHelper {
         }
     }
 
-    public static tranformOfflineDrafts(drafts: any): any {
+    public static tranformOfflineDrafts(drafts: OfflineSubmission[]): {
+        totalCount: number;
+        drafts: Draft[];
+        applicationCount: number;
+    } {
 
         const transformedDrafts = drafts.map((draft: any) => ({
             CreatedBy: draft.draftData?.CreatedBy || "Unknown",
