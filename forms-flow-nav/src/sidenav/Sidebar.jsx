@@ -22,6 +22,7 @@ import { LANGUAGE } from "../constants/constants";
 import { checkIntegrationEnabled } from "../services/integration";
 import MenuComponent from "./MenuComponent";
 // import Appname from "./formsflow.svg";
+import { ApplicationLogo } from "@formsflow/components";
 import { ProfileSettingsModal } from "./ProfileSettingsModal";
 import PropTypes from 'prop-types';
 
@@ -237,12 +238,16 @@ const Sidebar = React.memo(({ props, sidenavHeight="100%" }) => {
   return (
       <div className="sidenav" style={{ height: sidenavHeight }}>
         <div className="logo-container">
-           <img
-          width="160"
-          height="auto"
-          src="/RoadsafteyLogo.png"
-          alt="applicationName"
-        />
+        {APPLICATION_NAME === "roadsafety" ? (
+          <img
+            width="160"
+            height="auto"
+            src="/RoadsafteyLogo.png"
+            alt="applicationName"
+          />
+        ) : (
+          <ApplicationLogo data-testid="application-logo" />
+        )}
         </div>
         <div className="options-container" data-testid="options-container">
           <Accordion activeKey={activeKey} onSelect={(key) => setActiveKey(key)}>
