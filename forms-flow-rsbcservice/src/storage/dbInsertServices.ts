@@ -200,7 +200,7 @@ class OfflineSaveService {
    * Inserts submission data into IndexedDB.
    * @param {any} draft - Submission data to be stored.
    */
-  public static async insertOfflineDraftData (draft: any): Promise<Record<string, any>> {
+  public static async insertOfflineDraftData (draft: any, serverDraftId: string | null = null): Promise<Record<string, any>> {
     try {
       const formId = draft?.formId;
       if (!formId) {
@@ -211,7 +211,7 @@ class OfflineSaveService {
       await this.saveFFDataToIndexedDB("offlineSubmission", offlineDraft?.inputDraft);
       const activeFormData = {
         localDraftId: offlineDraft?.inputDraft?.localDraftId,
-        serverDraftId: ""
+        serverDraftId: serverDraftId ?? null
       };
       await this.saveFFDataToIndexedDB("activeForm", activeFormData);
       return offlineDraft?.res;

@@ -316,5 +316,33 @@ class OfflineFetchService {
     }
   }
   
+  public static async isDraftIdInActiveForm(draftId: string): Promise<boolean> {
+    try {
+        const localDraftId = Number(draftId);
+        if (isNaN(localDraftId)) {
+            console.error("Invalid localDraftId: Not a valid number");
+            return false;
+        }
+        if (!ffDb) {
+            throw new Error("IndexedDB is not available.");
+        }
+
+        await ffDb.open();
+        const table = ffDb["activeForm"];
+
+        if (!table) {
+            throw new Error("Table 'activeForm' not found in IndexedDB.");
+        }
+
+        // Check if the draftId exists
+        const data = await table.get(localDraftId);
+        return !!data; // Return true if data exists, false otherwise
+
+    } catch (error) {
+        console.error(`Error checking draftId in activeForm with id ${draftId}:`, error);
+        return false;
+    }
+  } 
+
 }
 export default OfflineFetchService;
