@@ -292,7 +292,7 @@ class OfflineFetchService {
       if (!table) {
         throw new Error(`Table application not found in IndexedDB.`);
       }
-      const data = await table.toArray();
+      const data = await table.orderBy("modified").reverse().toArray();
       if (data.length === 0) {
         console.log(`No data found in table application.`);
         return;
