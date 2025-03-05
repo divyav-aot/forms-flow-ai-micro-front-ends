@@ -67,7 +67,8 @@ class OfflineEditService {
         _id: string;
     },
     draftId: string,
-    formId: string
+    formId: string,
+    serverDraftId: number
 ): Promise<{ status: string; message?: string }> {
     try {
         const localDraftId = Number(draftId);
@@ -99,7 +100,7 @@ class OfflineEditService {
         }
 
         // Update the required fields from newSubmissionData
-        draft = DBServiceHelper.constructUpdateOfflineSubmissionData(draft, newSubmissionData);
+        draft = DBServiceHelper.constructUpdateOfflineSubmissionData(draft, newSubmissionData, serverDraftId);
 
         // Save the updated draft back to IndexedDB
         await offlineSubmissions.put(draft);
@@ -107,10 +108,10 @@ class OfflineEditService {
         const applicationData = DBServiceHelper.constructApplicationData(formId, draft.localSubmissionId, formData);
         await OfflineSaveService.saveFFDataToIndexedDB("applications", applicationData);
         await ffDb.activeForm.clear();
-        return { status: "success", message: "Submission with localDraftId ${localDraftId} updated successfully." };
+        return { status: "success", message: `Submission with localDraftId ${localDraftId} updated successfully.` };
     } catch (error) {
         console.error(`Error updating submission data for localDraftId ${draftId}:`, error);
-        return { status: "failure", message: error.message };
+        return { status: "error", message: error.message };
     }
   }
 

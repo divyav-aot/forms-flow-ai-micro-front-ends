@@ -101,14 +101,14 @@ interface DraftMetaData {
 }
 
 interface DraftData {
-  CreatedBy: string;
-  DraftName: string;
-  localApplicationId: number;
-  serverDraftId: string; // can be removed if not needed
-  serverApplicationId: string; // can be removed if not needed
-  formType: string;
-  processKey: string;
-  processName: string;
+  CreatedBy?: string;
+  DraftName?: string;
+  localApplicationId?: number;
+  serverDraftId?: number;
+  serverApplicationId?: number;
+  formType?: string;
+  processKey?: string;
+  processName?: string;
 }
 
 export interface SubmissionData {
@@ -117,7 +117,8 @@ export interface SubmissionData {
   externalIds: any[];
   roles: any[];
   metadata: Record<string, any>;
-
+  state?: string;
+  _vnote?: string;
 }
 
 // brought localDraftId and localSubmissionId here because,

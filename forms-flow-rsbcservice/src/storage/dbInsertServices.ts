@@ -186,15 +186,22 @@ class OfflineSaveService {
    * @param {any} data - Submission data to be stored.
    * @param {string} formId - Form ID associated with the submission.
    */
-  public static async insertOfflineSubmissionData (data: any, formId: string): Promise<void> {
+  public static async insertOfflineSubmissionData (
+    data: any, 
+    formId: string, 
+    serverDraftId: number, 
+    serverApplicationId: number
+  ): Promise<{ status: string; message?: string }> {
     try {
       const formData = await OfflineFetchService.fetchOfflineFormById(formId);
-      const submissionData = DBServiceHelper.constructOfflineSubmissionData(data, formId);
+      const submissionData = DBServiceHelper.constructOfflineSubmissionData(data, formId, serverDraftId, serverApplicationId);
       const applicationData = DBServiceHelper.constructApplicationData(formId, submissionData.localSubmissionId, formData);
       await this.saveFFDataToIndexedDB("offlineSubmission", submissionData);
       await this.saveFFDataToIndexedDB("applications", applicationData);
+      return { status: "success", message: `Submission inserted successfully.` };
     } catch (error) {
       console.error(`Error processing offline submission or application data:`, error);
+      return { status: "error", message: error.message };
     }
   }
 

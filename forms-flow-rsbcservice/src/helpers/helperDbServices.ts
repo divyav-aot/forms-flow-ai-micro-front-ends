@@ -48,8 +48,9 @@ class DBServiceHelper {
      * @param {string} formId - The form ID.
      * @returns {object} - The constructed offline submission data.
      */
-    public static constructOfflineSubmissionData(submission: any, formId: string): OfflineSubmission {
+    public static constructOfflineSubmissionData(submission: any, formId: string, serverDraftId: number, serverApplicationId: number): OfflineSubmission {
         const submissionData = this.constructSubmissionDataObject(submission);
+        const draftData = {serverDraftId, serverApplicationId}
         const _id = this.generateGUID();
         const submissionId = this.generateGUID();
         const now = new Date().toISOString();
@@ -57,6 +58,7 @@ class DBServiceHelper {
             _id,
             localSubmissionId: submissionId,
             submissionData,
+            draftData,
             created: now,
             modified: now,
             data: submission?.data,
@@ -331,14 +333,14 @@ class DBServiceHelper {
         };
     }
 
-    public static constructUpdateOfflineSubmissionData(draft: any, newSubmissionData: any): any {
+    public static constructUpdateOfflineSubmissionData(draft: any, newSubmissionData: any, serverDraftId: number): any {
         // Update the required fields from newSubmissionData
         draft.data = newSubmissionData.data;
         draft.localSubmissionId = this.generateGUID();
         draft.modified = newSubmissionData.modified || new Date().toISOString();
         draft.type = "application";
         draft.created = newSubmissionData.created || draft.created; // Preserve original created date if not provided
-
+        draft.draftData.serverDraftId = serverDraftId;
         // Update submissionData structure
         draft.submissionData = {
             access: newSubmissionData.access || [],
