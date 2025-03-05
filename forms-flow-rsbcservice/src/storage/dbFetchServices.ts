@@ -2,6 +2,18 @@ import { rsbcDb } from "./rsbcDb";
 import { ffDb, IndividualFormDefinition, OfflineSubmission } from "./ffDb";
 import { StaticTables } from "../constants/constants";
 import DBServiceHelper from "../helpers/helperDbServices";
+import { FormTypes } from "../constants/constants";
+
+interface TableFilter {
+  column: string;
+  condition: "=" | "IN" | "LIKE";
+  values: string | string[];
+}
+
+interface UpdateFilter {
+  conditions: Record<string, any>; // Object with search conditions
+  updates: Record<string, any>; // Object with updates to make
+}
 
 class OfflineFetchService {
   
@@ -10,25 +22,203 @@ class OfflineFetchService {
    * Ensures that the table is within the predefined static tables list.
    * 
    * @param tableName - Name of the table to fetch data from.
+   * @param filter - Optional filter object for filtering results
+   * @param filter.column - The column name to filter on
+   * @param filter.condition - The condition to apply ("=" | "IN" | "LIKE")
+   * @param filter.values - The value(s) to filter by. String for "=" and "LIKE", string[] for "IN"
    * @returns A promise that resolves to an array of records from the table.
    * @throws Error if IndexedDB is unavailable, the table is inaccessible, or data retrieval fails.
    */
-  public static async fetchStaticDataFromTable(tableName: string): Promise<any[]> {
+  public static async fetchStaticDataFromTable(
+    tableName: string,
+    filter?: TableFilter
+  ): Promise<any[]> {
     try {
       if (!rsbcDb) throw new Error("IndexedDB is not available.");
-      if (!StaticTables.includes(tableName)) throw new Error(`Table ${tableName} is not accessible.`);
-  
+      if (!StaticTables.includes(tableName))
+        throw new Error(`Table ${tableName} is not accessible.`);
+
       await rsbcDb.open(); // Ensure the database is open
-  
+
       const table = rsbcDb[tableName];
-      if (!table) throw new Error(`Table ${tableName} not found in IndexedDB.`);
-  
-      const data = await table.toArray();
-      if (!data.length) console.warn(`No data found in table ${tableName}.`);
-  
+      if (!table) {
+        throw new Error(`Table ${tableName} not found in IndexedDB.`);
+      }
+
+      // Validate filter if provided
+      if (filter) {
+        if (!filter.column || !filter.condition) {
+          throw new Error("Invalid filter: missing required properties");
+        }
+
+        if (filter.condition === "IN" && !Array.isArray(filter.values)) {
+          throw new Error("Values must be an array for IN condition");
+        }
+      }
+
+      let data: any[] = [];
+      if (filter) {
+        const { column, condition, values } = filter;
+
+        switch (condition) {
+          case "=":
+            data = await table.where(column).equals(values).toArray();
+            break;
+
+          case "IN":
+            data = await table
+              .where(column)
+              .anyOf(values as string[])
+              .toArray();
+            break;
+
+          case "LIKE":
+            if (typeof values !== "string") {
+              throw new Error("Values must be a string for LIKE condition");
+            }
+            const allData = await table.toArray();
+            data = allData.filter((item) => {
+              const itemValue = String(item[column] || "").toLowerCase();
+              const searchValue = String(values || "").toLowerCase();
+              return itemValue.includes(searchValue);
+            });
+            break;
+
+          default:
+            throw new Error(`Unsupported condition: ${condition}`);
+        }
+      } else {
+        data = await table.toArray();
+      }
+
+      if (!data.length) {
+        console.warn(`No data found in table ${tableName}.`);
+      }
+
       return data;
     } catch (error) {
       console.error(`Error fetching data from table ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Updates data in a static table in IndexedDB.
+   * Ensures that the table is within the predefined static tables list.
+   *
+   * @param tableName - Name of the table to update data in
+   * @param filter - Filter object for updating records
+   * @param filter.conditions - Object with conditions to match records (e.g., {id: 3} or {date: "1990-12-12", status: "new"})
+   * @param filter.updates - Object with updates to make (e.g., {status: "completed"})
+   * @returns A promise that resolves to the number of updated records
+   * @throws Error if IndexedDB is unavailable, the table is inaccessible, or update fails.
+   */
+  public static async updateStaticDataTable(
+    tableName: string,
+    filter: UpdateFilter
+  ): Promise<number> {
+    try {
+      if (!rsbcDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      if (!StaticTables.includes(tableName)) {
+        throw new Error(`Table ${tableName} is not accessible.`);
+      }
+
+      await rsbcDb.open(); // Ensure the database is open
+
+      // Get table using Dexie's table() method
+      const table = rsbcDb.table(tableName);
+      if (!table) {
+        throw new Error(`Table ${tableName} not found in IndexedDB.`);
+      }
+
+      // Validate filter
+      if (
+        !filter?.conditions ||
+        !filter?.updates ||
+        Object.keys(filter.conditions).length === 0 ||
+        Object.keys(filter.updates).length === 0
+      ) {
+        throw new Error(
+          "Invalid filter: conditions and updates are required and must not be empty"
+        );
+      }
+
+      // Get all records first
+      const allRecords = await table.toArray();
+
+      // Filter records that match ALL conditions
+      const recordsToUpdate = allRecords.filter((record) => {
+        return Object.entries(filter.conditions).every(
+          ([key, value]) => record[key] === value
+        );
+      });
+
+      // Update each record with all specified updates
+      const updatePromises = recordsToUpdate.map(async (record) => {
+        // Apply all updates to the record
+        Object.entries(filter.updates).forEach(([key, value]) => {
+          record[key] = value;
+        });
+        return await table.put(record);
+      });
+
+      await Promise.all(updatePromises);
+      const updateCount = recordsToUpdate.length;
+
+      if (updateCount === 0) {
+        console.warn(`No records updated in table ${tableName}.`);
+      }
+
+      return updateCount;
+    } catch (error) {
+      console.error(`Error updating data in table ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a new record in a static table in IndexedDB.
+   * Ensures that the table is within the predefined static tables list.
+   *
+   * @param tableName - Name of the table to create data in
+   * @param data - The data object to insert into the table
+   * @returns A promise that resolves to the id of the created record
+   * @throws Error if IndexedDB is unavailable, the table is inaccessible, or creation fails.
+   */
+  public static async insertStaticDataTable(
+    tableName: string,
+    data: any
+  ): Promise<any> {
+    try {
+      if (!rsbcDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      if (!StaticTables.includes(tableName)) {
+        throw new Error(`Table ${tableName} is not accessible.`);
+      }
+
+      await rsbcDb.open(); // Ensure the database is open
+
+      const table = rsbcDb.table(tableName);
+      if (!table) {
+        throw new Error(`Table ${tableName} not found in IndexedDB.`);
+      }
+
+      // Validate data
+      if (!data || Object.keys(data).length === 0) {
+        throw new Error(
+          "Invalid data: data object is required and must not be empty"
+        );
+      }
+
+      // Add the record to the table
+      const id = await table.add(data);
+
+      return id;
+    } catch (error) {
+      console.error(`Error creating data in table ${tableName}:`, error);
       throw error;
     }
   }
@@ -102,7 +292,7 @@ class OfflineFetchService {
       if (!table) {
         throw new Error(`Table application not found in IndexedDB.`);
       }
-      const data = await table.toArray();
+      const data = await table.orderBy("modified").reverse().toArray();
       if (data.length === 0) {
         console.log(`No data found in table application.`);
         return;
@@ -207,7 +397,6 @@ class OfflineFetchService {
     }
   }
 
-
   /**
    * Fetches offline drafts from the "offlineSubmission" table.
    * 
@@ -239,6 +428,28 @@ class OfflineFetchService {
     } catch (error) {
         console.error(`Error fetching data from offlineSubmission with offline draft information :`, error);
         throw error;
+    }
+  }
+  /**
+   * Fetches the all form Ids data from the "formID" table in IndexedDB.
+   */
+  public static async fetchFormIdDataFromTable(): Promise<any[]> {
+    const tableName = "formID";
+    try {
+      if (!rsbcDb) throw new Error("IndexedDB is not available.");
+
+      await rsbcDb.open(); // Ensure the database is open
+
+      const table = rsbcDb[tableName];
+      if (!table) throw new Error(`Table ${tableName} not found in IndexedDB.`);
+
+      const data = await table.toArray();
+      if (!data.length) console.warn(`No data found in table ${tableName}.`);
+
+      return data;
+    } catch (error) {
+      console.error(`Error fetching data from table ${tableName}:`, error);
+      throw error;
     }
   }
 
@@ -343,5 +554,158 @@ class OfflineFetchService {
       throw error;
     }
   }
+  
+  public static async isDraftIdInActiveForm(draftId: string): Promise<boolean> {
+    try {
+        const localDraftId = Number(draftId);
+        if (isNaN(localDraftId)) {
+            console.error("Invalid localDraftId: Not a valid number");
+            return false;
+        }
+        if (!ffDb) {
+            throw new Error("IndexedDB is not available.");
+        }
+
+        await ffDb.open();
+        const table = ffDb["activeForm"];
+
+        if (!table) {
+            throw new Error("Table 'activeForm' not found in IndexedDB.");
+        }
+
+        // Check if the draftId exists
+        const data = await table.get(localDraftId);
+        return !!data; // Return true if data exists, false otherwise
+
+    } catch (error) {
+        console.error(`Error checking draftId in activeForm with id ${draftId}:`, error);
+        return false;
+    }
+  }
+  
+  /**
+   * Returns the unleased form IDs for a given form type.
+   * @param formType - "12Hour", "24Hour", "VI"
+   */
+  public static async getAvailableFormIds(formType: string): Promise<any[]> {
+    try {
+      if (!rsbcDb.formID) {
+        throw new Error("FormID table is not available.");
+      }
+      if (!formType || !FormTypes.includes(formType)) {
+        throw new Error(`Valid formTypes: ${FormTypes.join(", ")}`);
+      }
+      const unleasedForms = await rsbcDb.formID
+        .where("form_type")
+        .equals(formType)
+        .filter(form => form.leased === false)
+        .toArray();
+
+      return unleasedForms.map((form) => form.id);
+    } catch (error) {
+        console.error(`Error fetching available form IDs from IndexedDB:`, error);
+        return [];
+    }
+  }
+
+  /**
+   * Fetches the form availability data from the "formID" table in IndexedDB.
+   * @param formType - "12Hour", "24Hour", "VI"
+   */
+  public static async getNextAvailabeFormId(formType: string): Promise<string | null> {
+    try {
+      if (!rsbcDb.formID) {
+        throw new Error("FormID table is not available.");
+      }
+
+      if (!formType || !FormTypes.includes(formType)) {
+        throw new Error(`Valid formTypes: ${FormTypes.join(", ")}`);
+      }
+
+      const topUnleasedForm = await rsbcDb.formID
+        .where("form_type")
+        .equals(formType)
+        .and(form => form.leased === false)
+        .sortBy("last_updated")
+        .then(forms => forms[0]);
+
+      return topUnleasedForm ? topUnleasedForm.id : null;
+    } catch (error) {
+      console.error(`Error fetching next available form ID from IndexedDB:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetches the form unleased Ids data from the "formID" table in IndexedDB.
+   * @return [{"form_type": string, "count": number}]
+   */
+  public static async getFormAvailability(): Promise<{ form_type: string; count: number }[]> {
+    try {
+      if (!rsbcDb.formID) {
+        throw new Error("FormID table is not available.");
+      }
+
+      const unleasedForms = await rsbcDb.formID
+        .filter(form => form.leased === false)
+        .toArray();
+
+      const formTypeCounts: { [key: string]: number } = {};
+      unleasedForms.forEach(form => {
+        formTypeCounts[form.form_type] = (formTypeCounts[form.form_type] || 0) + 1;
+      });
+
+      const result = Object.entries(formTypeCounts)
+        .map(([form_type, count]) => ({
+          form_type,
+          count
+        })
+      );
+
+      return result;
+    } catch (error) {
+      console.error(`Error fetching form availability from IndexedDB:`, error);
+      return [];
+    }
+  }
+
+    /**
+   * Fetches the offline submission from the "applications" table based on ID.
+   *
+   * @returns A promise resolving to an object containing submission.
+   * @throws Error if IndexedDB is unavailable or the table is missing.
+   */
+    public static async fetchApplicationById(
+      applicationId: number
+    ): Promise<any> {
+      try {
+        if (!ffDb) {
+          throw new Error("IndexedDB is not available.");
+        }
+        await ffDb.open();
+        // Get reference to the formDefinition table
+        const offlineApplications = ffDb["applications"];
+        if (!offlineApplications) {
+          throw new Error("Table application not found in IndexedDB.");
+        }
+        // Fetch row by ID
+        const application = await offlineApplications
+          .where("id")
+          .equals(Number(applicationId))
+          .first();
+        if (!application) {
+          console.log(`No record found with id: ${applicationId}`);
+          return null;
+        }
+        return application;
+      } catch (error) {
+        console.error(
+          `Error fetching data from application with id ${applicationId}:`,
+          error
+        );
+        throw error;
+      }
+    }
+
 }
 export default OfflineFetchService;

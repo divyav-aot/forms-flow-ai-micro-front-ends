@@ -247,7 +247,7 @@ class DBServiceHelper {
         const CreatedBy = userDetails?.preferred_username;
         const DraftName = formData?.form?.title;
         const localApplicationId = this.generateRandomNumber();
-        const serverDraftId="";
+        const serverDraftId=draft?.serverDraftId;
         const serverApplicationId="";
         const formType = formData?.form?.type || "";
         const processKey = "";
@@ -359,6 +359,8 @@ class DBServiceHelper {
             formId: draft.formId,
             formType: draft.draftData.formType,
             id: draft.localDraftId,
+            localDraftId: draft.localDraftId,
+            serverDraftId: draft.draftData?.serverDraftId,
             modified: draft.modified,
             processKey: draft.draftData.processKey,
             processName: draft.draftData.processName,
