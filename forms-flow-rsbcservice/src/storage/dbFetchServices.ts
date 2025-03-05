@@ -1,5 +1,5 @@
 import { rsbcDb } from "./rsbcDb";
-import { ffDb, IndividualFormDefinition } from "./ffDb";
+import { ffDb, IndividualFormDefinition, OfflineSubmission } from "./ffDb";
 import { StaticTables } from "../constants/constants";
 import DBServiceHelper from "../helpers/helperDbServices";
 
@@ -315,6 +315,33 @@ class OfflineFetchService {
         throw error;
     }
   }
-  
+
+  /**
+   * Fetch all non active offline submissions.
+   * @returns all non active offline submissions.
+   */
+  public static async fetchAllNonActiveOfflineSubmissions(): Promise<
+    OfflineSubmission[]
+  > {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
+      // Get the localDraftId from the activeForm table.
+      const activeForm = await ffDb.activeForm.limit(1).first();
+      const localDraftId = parseInt(activeForm?.localDraftId);
+      console.log(localDraftId);
+      // Get all non active offline submissions.
+      const submissions = await ffDb.offlineSubmissions
+        .filter((eachRow) => eachRow.localDraftId !== localDraftId)
+        .toArray();
+
+      return submissions;
+    } catch (error) {
+      console.error("Error fetching data.", error);
+      throw error;
+    }
+  }
 }
 export default OfflineFetchService;

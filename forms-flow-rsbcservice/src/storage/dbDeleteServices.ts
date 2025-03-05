@@ -65,6 +65,43 @@ class OfflineDeleteService {
     }
   }
 
+  /**
+   * Function is delete the bulk offline submissions with the local primary key.
+   * @param localSubmissionIdsToDelete list of local submission primary key to be deleted.
+   */
+  public static async bulkOfflineSubmissionDelete(
+    localSubmissionIdsToDelete: string[]
+  ): Promise<void> {
+    try {
+      console.log(
+        localSubmissionIdsToDelete,
+        "___storage localSubmissionIdsToDelete"
+      );
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
 
+      // Get reference to the offlineSubmissions table
+      const offlineSubmissions = ffDb["offlineSubmissions"];
+
+      if (!offlineSubmissions) {
+        throw new Error("Table offlineSubmissions not found in IndexedDB.");
+      }
+
+      // Perform the bulk delete operation
+      const deletedCount: number = await offlineSubmissions
+        .where("_id")
+        .anyOf(localSubmissionIdsToDelete) // Matches any of the provided IDs
+        .delete();
+
+      console.log(`${deletedCount} records were deleted.`);
+    } catch (error) {
+      console.error(
+        `Error deleting data ${localSubmissionIdsToDelete}:`,
+        error
+      );
+    }
+  }
 }
 export default OfflineDeleteService;
