@@ -195,7 +195,7 @@ class FormsFlowDB extends Dexie {
 
     this.version(1).stores({
       formDefinitionList: "id, formId, formName, formType, processKey, modified",
-      applications: "id, formId, submissionId",
+      applications: "id, modified, formId, submissionId",
       drafts: "id, applicationId, formId",
       offlineSubmissions: "_id, formId, localSubmissionId, localDraftId, type, modified",
       formDefinitions: "_id, title, name, path, type, created, modified, machineName, parentFormId",
