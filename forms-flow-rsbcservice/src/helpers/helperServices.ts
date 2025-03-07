@@ -287,8 +287,7 @@ export const printCheckHelper = (
  * @param mimeType
  */
 export const convertBase64ToBlob = (base64, mimeType = "image/png") => {
-  // Decode Base64 to binary data
-  const byteCharacters = atob(base64.split(",")[1]); // Ignore metadata part if present
+  const byteCharacters = atob(base64.split(",")[1]);
   const byteNumbers = new Array(byteCharacters.length);
 
   for (let i = 0; i < byteCharacters.length; i++) {
@@ -296,8 +295,6 @@ export const convertBase64ToBlob = (base64, mimeType = "image/png") => {
   }
 
   const byteArray = new Uint8Array(byteNumbers);
-
-  // Create and return Blob
   return new Blob([byteArray], { type: mimeType });
 };
 
@@ -308,9 +305,8 @@ export const convertBase64ToBlob = (base64, mimeType = "image/png") => {
 export const convertBlobToBase64 = (blob) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.readAsDataURL(blob); // Read the blob as a data URL (Base64)
-
-    reader.onloadend = () => resolve(reader.result); // Resolve with Base64 string
-    reader.onerror = (error) => reject(error); // Handle errors
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
   });
 };
