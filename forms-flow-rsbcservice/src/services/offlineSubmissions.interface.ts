@@ -11,7 +11,7 @@ export interface RequestCreateFormat {
 }
 
 export interface FormioCreateResponse {
-  response?: {
+  data?: {
     form: string;
     _id: string;
     data: FormData;

@@ -106,8 +106,6 @@ class OfflineSubmissions {
     );
   }
 
-  // TODO: add logic/adjust in  service worker to enable backgroundsync in only draft disabale case
-
   /**
    * Process the submissions.
    * @param submissions list of offline submissions that need to be processed.
@@ -178,7 +176,15 @@ class OfflineSubmissions {
         state: "submitted",
         _vnote: ""
       };
-      return RequestService.httpPOSTRequest(formioUrl, formioPayload);
+      const header = { "x-jwt-token": localStorage.getItem("formioToken") };
+      console.log(formioUrl, formioPayload);
+      return RequestService.httpPOSTRequest(
+        formioUrl,
+        formioPayload,
+        null,
+        false,
+        header
+      );
     } catch (error) {
       console.error("Error creating the formio submission:", error);
     }
@@ -214,10 +220,10 @@ class OfflineSubmissions {
     const origin = `${window.location.origin}/`;
     // Process and transform the data.
     return this.getProcessReq(
-      { _id: data?.response?.form },
-      data?.response?._id,
+      { _id: data?.data?.form },
+      data?.data?._id,
       origin,
-      data?.response?.data
+      data?.data?.data
     );
   }
 
