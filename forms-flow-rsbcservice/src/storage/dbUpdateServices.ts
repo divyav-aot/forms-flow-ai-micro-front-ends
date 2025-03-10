@@ -114,57 +114,6 @@ class OfflineEditService {
         return { status: "error", message: error.message };
     }
   }
-  public static async updateServerDraftIdForOfflineSubmissionData(
-    draftId: number,
-    serverDraftId: number,
-    newDraft: Record<string, any>
-): Promise<{ status: string; message?: string }> {
-    try {
-        const localDraftId = Number(draftId);
-
-        if (isNaN(localDraftId)) {
-          console.error("Invalid draftId: Not a valid number");
-          return { status: "error", message: `Invalid draftId: Not a valid number` };
-        }
-        if (!ffDb) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await ffDb.open();
-
-        // Get reference to the offlineSubmissions table
-        const offlineSubmissions = ffDb["offlineSubmissions"];
-
-        if (!offlineSubmissions) {
-            throw new Error("Table offlineSubmissions not found in IndexedDB.");
-        }
-
-        // Find the draft by localDraftId
-        let draft: OfflineSubmission | undefined = await offlineSubmissions
-            .where("localDraftId")
-            .equals(localDraftId)
-            .first();
-
-        if (!draft) {
-            return { status: "failure", message: `No draft found with localDraftId: ${localDraftId}` };
-        }
-
-        // Save the updated draft back to IndexedDB
-        await offlineSubmissions.update(draft._id, {
-            data: newDraft?.data,
-            modified: new Date().toISOString(),
-            serverDraftId: serverDraftId 
-        });
-        const activeFormData = {
-            localDraftId: localDraftId,
-            serverDraftId: serverDraftId ?? null
-          };
-          await OfflineSaveService.saveFFDataToIndexedDB("activeForm", activeFormData);
-        return { status: "success", message: `OfflineSubmission for ${localDraftId} updated successfully.` };
-    } catch (error) {
-        console.error(`Error updating submission data for localDraftId ${draftId}:`, error);
-        return { status: "error", message: error.message };
-    }
-  }
 
   public static async updateActiveFormTable(
     updateColumn: string,
