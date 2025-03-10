@@ -246,10 +246,12 @@ class DBServiceHelper {
          * @param {any} draft - The draft data.
          * @returns {object} - The constructed offline submission data.
          */
-    public static constructOfflineDraftData(draft: any, formId: string, formData: any): {
-        inputDraft: OfflineSubmission;
-        res: Record<string, any>;
-    } {
+    public static constructOfflineDraftData(
+        draft: any, 
+        formId: string, 
+        formData: any, 
+        now: string): OfflineSubmission
+    {
         const userDetails = this.getUserDetails();
         const _id = this.generateGUID();
         const localDraftId = this.generateRandomNumber();
@@ -261,21 +263,19 @@ class DBServiceHelper {
         const formType = formData?.form?.type || "";
         const processKey = "";
         const processName = "";
-        const now = new Date().toISOString();
         const draftData = {
             CreatedBy: CreatedBy,
             DraftName: DraftName,
             localApplicationId: localApplicationId,
-            serverDraftId: serverDraftId,
             serverApplicationId: serverApplicationId,
             formType: formType,
             processKey: processKey,
             processName: processName
         }
-        const res = this.constructDraftResponse(localApplicationId, localDraftId, now, draft?.data, _id);
         const inputDraft = {
             _id,
             localDraftId: localDraftId,
+            serverDraftId: serverDraftId,
             submissionData: {},
             draftData: draftData,
             created: now,
@@ -284,13 +284,10 @@ class DBServiceHelper {
             formId,
             type: "draft"
         };
-        return {
-            inputDraft,
-            res
-        }
+        return inputDraft;
     }
 
-    private static constructDraftResponse(
+    public static constructDraftResponse(
         localApplicationId: number, 
         localDraftId: number, 
         created: string, 
@@ -350,7 +347,7 @@ class DBServiceHelper {
         draft.modified = newSubmissionData.modified || new Date().toISOString();
         draft.type = "application";
         draft.created = newSubmissionData.created || draft.created; // Preserve original created date if not provided
-        draft.draftData.serverDraftId = serverDraftId;
+        draft.serverDraftId = serverDraftId;
         
         draft.submissionData = {
             access: newSubmissionData.access || [],
@@ -372,7 +369,7 @@ class DBServiceHelper {
             formType: draft.draftData.formType,
             id: draft.localDraftId,
             localDraftId: draft.localDraftId,
-            serverDraftId: draft.draftData?.serverDraftId,
+            serverDraftId: draft?.serverDraftId,
             modified: draft.modified,
             processKey: draft.draftData.processKey,
             processName: draft.draftData.processName,

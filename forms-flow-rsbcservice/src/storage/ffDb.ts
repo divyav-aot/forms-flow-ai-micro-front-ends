@@ -104,7 +104,6 @@ interface DraftData {
   CreatedBy?: string;
   DraftName?: string;
   localApplicationId?: number;
-  serverDraftId?: number;
   serverApplicationId?: number;
   formType?: string;
   processKey?: string;
@@ -128,6 +127,7 @@ export interface OfflineSubmission {
   formId: string;
   data: Record<string, any>;
   localDraftId?: number;
+  serverDraftId?: number;
   draftData?: DraftData;
   submissionData?: SubmissionData;
   localSubmissionId?: string;
@@ -137,8 +137,8 @@ export interface OfflineSubmission {
 }
 
 export interface ActiveForm {
-  localDraftId: string;
-  serverDraftId?: string;
+  localDraftId?: number;
+  serverDraftId?: number;
 }
 
 interface TaskVariable {
@@ -197,7 +197,7 @@ class FormsFlowDB extends Dexie {
       formDefinitionList: "id, formId, formName, formType, processKey, modified",
       applications: "id, modified, formId, submissionId",
       drafts: "id, applicationId, formId",
-      offlineSubmissions: "_id, formId, localSubmissionId, localDraftId, type, modified",
+      offlineSubmissions: "_id, formId, localSubmissionId, localDraftId, type, modified, serverDraftId",
       formDefinitions: "_id, title, name, path, type, created, modified, machineName, parentFormId",
       activeForm: "localDraftId, serverDraftId",
       formProcesses: "formId, formName"

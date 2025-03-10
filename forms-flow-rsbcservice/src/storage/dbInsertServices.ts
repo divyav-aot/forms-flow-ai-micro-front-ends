@@ -209,23 +209,53 @@ class OfflineSaveService {
    * Inserts submission data into IndexedDB.
    * @param {any} draft - Submission data to be stored.
    */
-  public static async insertOfflineDraftData (draft: any, serverDraftId: number | null = null): Promise<Record<string, any>> {
+  public static async insertOrUpdateOfflineDraftData (draft: any, serverDraftId: number | null = null): Promise<Record<string, any>> {
     try {
       const formId = draft?.formId;
       if (!formId) {
         console.warn("No valid formId found. Using empty formData.");
       }
+      const offlineSubmissions = ffDb["offlineSubmissions"];
+        if (!offlineSubmissions) {
+            throw new Error("Table offlineSubmissions not found in IndexedDB.");
+        }
+      const now = new Date().toISOString();
       const formData = formId ? await OfflineFetchService.fetchOfflineFormById(formId) : {};
-      const offlineDraft = DBServiceHelper.constructOfflineDraftData(draft, formId, formData);
-      await this.saveFFDataToIndexedDB("offlineSubmission", offlineDraft?.inputDraft);
+      const offlineDraft = DBServiceHelper.constructOfflineDraftData(draft, formId, formData, now);
+      let draftResponse: Record<string, any>;
+      if (serverDraftId) {
+        const existingSubmission = await offlineSubmissions
+            .where("serverDraftId")
+            .equals(serverDraftId)
+            .first(); // Fetch the first matching record
+
+        if (existingSubmission) {
+            // Update existing record with new data and modified timestamp
+            await offlineSubmissions.update(existingSubmission._id, {
+                data: draft?.data,
+                modified: now
+            });
+            draftResponse = DBServiceHelper.constructDraftResponse(existingSubmission.draftData?.localApplicationId, existingSubmission?.localDraftId, now, draft?.data, existingSubmission?._id);
+        } else {
+            // If no existing record, insert a new one
+            await ffDb.offlineSubmissions.put(offlineDraft);
+        }
+    } else {
+        // If serverDraftId is null, insert a new entry
+        await ffDb.offlineSubmissions.put(offlineDraft);
+    }
+      
       const activeFormData = {
-        localDraftId: offlineDraft?.inputDraft?.localDraftId,
+        localDraftId: offlineDraft?.localDraftId,
         serverDraftId: serverDraftId ?? null
       };
       await this.saveFFDataToIndexedDB("activeForm", activeFormData);
-      const transformedDrafts = DBServiceHelper.transformEditDraftData(offlineDraft?.inputDraft)
+      const transformedDrafts = DBServiceHelper.transformEditDraftData(offlineDraft);
+      if (!serverDraftId) {
+        draftResponse = DBServiceHelper.constructDraftResponse(offlineDraft?.draftData?.localApplicationId, offlineDraft?.localDraftId, now, draft?.data, offlineDraft?._id);
+      }
       return {
-        res: offlineDraft?.res,
+        res: draftResponse,
         draftDetails: transformedDrafts
       };
     } catch (error) {
@@ -258,6 +288,48 @@ class OfflineSaveService {
     } catch (error) {
         console.error(`Error inserting data into activeForm:`, error);
         return { status: "failure", message: error.message };
+    }
+  }
+
+  public static async saveActiveFormDataByServerDraftId(
+    serverDraftId: number
+  ): Promise<{ status: string; message?: string }> {
+    try {
+      if (!ffDb) {
+          throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
+
+      // Get reference to the specified table
+      const table = ffDb["activeForm"];
+
+      if (!table) {
+          throw new Error(`Table activeForm not found in IndexedDB.`);
+      }
+      if (serverDraftId) {
+        const offlineSubmissions = ffDb["offlineSubmissions"];
+        if (!offlineSubmissions) {
+            return { status: "failure", message: "Table offlineSubmissions not found in IndexedDB." };
+        }
+        const existingSubmission = await offlineSubmissions
+            .where("serverDraftId")
+            .equals(serverDraftId)
+            .first(); // Fetch the first matching record
+
+        if (existingSubmission) {
+            // Update existing record with new data and modified timestamp
+            const data = {
+              localDraftId: existingSubmission?.localDraftId,
+              serverDraftId: serverDraftId
+            }
+            await table.clear();
+            await table.put(data);
+        }
+      }
+      return { status: "success", message: `Data inserted into activeForm successfully.` };
+    } catch (error) {
+      console.error(`Error inserting data into activeForm:`, error);
+      return { status: "failure", message: error.message };
     }
   }
 
