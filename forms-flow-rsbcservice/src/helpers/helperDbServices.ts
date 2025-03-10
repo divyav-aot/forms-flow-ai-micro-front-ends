@@ -22,10 +22,16 @@ class DBServiceHelper {
      * Retrieves user details from storage.
      * @returns {any} - Parsed user details.
      */
-    private static getUserDetails(): any {
+    public static getUserDetails(): any {
         return JSON.parse(StorageService.get(StorageService.User.USER_DETAILS));
     }
-
+    /**
+     * Retrieves authorization token from storage.
+     * @returns string - authorization token.
+     */
+    public static getAuthorizationToken(): any {
+        return StorageService.get(StorageService.User.AUTH_TOKEN);
+    }
     /**
      * Constructs a submission data object.
      * @param {any} submission - The submission data.
@@ -38,7 +44,9 @@ class DBServiceHelper {
             owner: userDetails?.email,
             externalIds: [],
             roles: [],
-            access: []
+            access: [],
+            state: "",
+            _vnote: ""
         };
     }
 
@@ -48,8 +56,14 @@ class DBServiceHelper {
      * @param {string} formId - The form ID.
      * @returns {object} - The constructed offline submission data.
      */
-    public static constructOfflineSubmissionData(submission: any, formId: string): OfflineSubmission {
+    public static constructOfflineSubmissionData(
+        submission: any, 
+        formId: string, 
+        serverDraftId: number, 
+        serverApplicationId: number
+    ): OfflineSubmission {
         const submissionData = this.constructSubmissionDataObject(submission);
+        const draftData = {serverDraftId, serverApplicationId}
         const _id = this.generateGUID();
         const submissionId = this.generateGUID();
         const now = new Date().toISOString();
@@ -57,6 +71,7 @@ class DBServiceHelper {
             _id,
             localSubmissionId: submissionId,
             submissionData,
+            draftData,
             created: now,
             modified: now,
             data: submission?.data,
@@ -237,36 +252,36 @@ class DBServiceHelper {
          * @param {any} draft - The draft data.
          * @returns {object} - The constructed offline submission data.
          */
-    public static constructOfflineDraftData(draft: any, formId: string, formData: any): {
-        inputDraft: Record<string, any>;
-        res: Record<string, any>;
-    } {
+    public static constructOfflineDraftData(
+        draft: any, 
+        formId: string, 
+        formData: any, 
+        now: string): OfflineSubmission
+    {
         const userDetails = this.getUserDetails();
         const _id = this.generateGUID();
         const localDraftId = this.generateRandomNumber();
         const CreatedBy = userDetails?.preferred_username;
         const DraftName = formData?.form?.title;
         const localApplicationId = this.generateRandomNumber();
-        const serverDraftId=draft?.serverDraftId;
-        const serverApplicationId="";
+        const serverDraftId= draft?.serverDraftId ? Number(draft.serverDraftId) : null;
+        const serverApplicationId = null;
         const formType = formData?.form?.type || "";
         const processKey = "";
         const processName = "";
-        const now = new Date().toISOString();
         const draftData = {
             CreatedBy: CreatedBy,
             DraftName: DraftName,
             localApplicationId: localApplicationId,
-            serverDraftId: serverDraftId,
             serverApplicationId: serverApplicationId,
             formType: formType,
             processKey: processKey,
             processName: processName
         }
-        const res = this.constructDraftResponse(localApplicationId, localDraftId, now, draft?.data, _id);
         const inputDraft = {
             _id,
             localDraftId: localDraftId,
+            serverDraftId: serverDraftId,
             submissionData: {},
             draftData: draftData,
             created: now,
@@ -275,13 +290,10 @@ class DBServiceHelper {
             formId,
             type: "draft"
         };
-        return {
-            inputDraft,
-            res
-        }
+        return inputDraft;
     }
 
-    private static constructDraftResponse(
+    public static constructDraftResponse(
         localApplicationId: number, 
         localDraftId: number, 
         created: string, 
@@ -331,15 +343,18 @@ class DBServiceHelper {
         };
     }
 
-    public static constructUpdateOfflineSubmissionData(draft: any, newSubmissionData: any): any {
-        // Update the required fields from newSubmissionData
+    public static constructUpdateOfflineSubmissionData(
+        draft: any, 
+        newSubmissionData: any, 
+        serverDraftId: number
+    ): any {
         draft.data = newSubmissionData.data;
         draft.localSubmissionId = this.generateGUID();
         draft.modified = newSubmissionData.modified || new Date().toISOString();
         draft.type = "application";
         draft.created = newSubmissionData.created || draft.created; // Preserve original created date if not provided
-
-        // Update submissionData structure
+        draft.serverDraftId = serverDraftId;
+        
         draft.submissionData = {
             access: newSubmissionData.access || [],
             externalIds: newSubmissionData.externalIds || [],
@@ -360,7 +375,7 @@ class DBServiceHelper {
             formType: draft.draftData.formType,
             id: draft.localDraftId,
             localDraftId: draft.localDraftId,
-            serverDraftId: draft.draftData?.serverDraftId,
+            serverDraftId: draft?.serverDraftId,
             modified: draft.modified,
             processKey: draft.draftData.processKey,
             processName: draft.draftData.processName,

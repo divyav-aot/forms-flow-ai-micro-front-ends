@@ -101,23 +101,23 @@ interface DraftMetaData {
 }
 
 interface DraftData {
-  CreatedBy: string;
-  DraftName: string;
-  localApplicationId: number;
-  serverDraftId: string; // can be removed if not needed
-  serverApplicationId: string; // can be removed if not needed
-  formType: string;
-  processKey: string;
-  processName: string;
+  CreatedBy?: string;
+  DraftName?: string;
+  localApplicationId?: number;
+  serverApplicationId?: number;
+  formType?: string;
+  processKey?: string;
+  processName?: string;
 }
 
 export interface SubmissionData {
-  owner: string;
-  access: any[];
-  externalIds: any[];
-  roles: any[];
-  metadata: Record<string, any>;
-
+  owner?: string;
+  access?: any[];
+  externalIds?: any[];
+  roles?: any[];
+  metadata?: Record<string, any>;
+  state?: string;
+  _vnote?: string;
 }
 
 // brought localDraftId and localSubmissionId here because,
@@ -127,6 +127,7 @@ export interface OfflineSubmission {
   formId: string;
   data: Record<string, any>;
   localDraftId?: number;
+  serverDraftId?: number;
   draftData?: DraftData;
   submissionData?: SubmissionData;
   localSubmissionId?: string;
@@ -136,8 +137,8 @@ export interface OfflineSubmission {
 }
 
 export interface ActiveForm {
-  localDraftId: string;
-  serverDraftId?: string;
+  localDraftId?: number;
+  serverDraftId?: number;
 }
 
 interface TaskVariable {
@@ -196,7 +197,7 @@ class FormsFlowDB extends Dexie {
       formDefinitionList: "id, formId, formName, formType, processKey, modified",
       applications: "id, modified, formId, submissionId",
       drafts: "id, applicationId, formId",
-      offlineSubmissions: "_id, formId, localSubmissionId, localDraftId, type",
+      offlineSubmissions: "_id, formId, localSubmissionId, localDraftId, type, modified, serverDraftId",
       formDefinitions: "_id, title, name, path, type, created, modified, machineName, parentFormId",
       activeForm: "localDraftId, serverDraftId",
       formProcesses: "formId, formName"

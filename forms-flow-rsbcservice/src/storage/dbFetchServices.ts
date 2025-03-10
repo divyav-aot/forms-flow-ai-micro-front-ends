@@ -16,11 +16,10 @@ interface UpdateFilter {
 }
 
 class OfflineFetchService {
-  
   /**
    * Fetches static data from a given table in IndexedDB.
    * Ensures that the table is within the predefined static tables list.
-   * 
+   *
    * @param tableName - Name of the table to fetch data from.
    * @param filter - Optional filter object for filtering results
    * @param filter.column - The column name to filter on
@@ -225,44 +224,47 @@ class OfflineFetchService {
 
   /**
    * Fetches a specific offline form by its ID from the formDefinition table.
-   * 
+   *
    * @param formId - The ID of the form to retrieve.
    * @returns A promise resolving to the form data or null if not found.
    * @throws Error if IndexedDB is unavailable or the table is missing.
    */
   public static async fetchOfflineFormById(formId: string): Promise<any> {
     try {
-        if (!ffDb) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await ffDb.open();
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
 
-        // Get reference to the formDefinition table
-        const table = ffDb["formDefinitions"];
+      // Get reference to the formDefinition table
+      const table = ffDb["formDefinitions"];
 
-        if (!table) {
-            throw new Error("Table formDefinition not found in IndexedDB.");
-        }
+      if (!table) {
+        throw new Error("Table formDefinition not found in IndexedDB.");
+      }
 
-        // Fetch row by ID
-        const data = await table.get(formId);
-        const finalData = DBServiceHelper.transformFormDefinitionData(data);
+      // Fetch row by ID
+      const data = await table.get(formId);
+      const finalData = DBServiceHelper.transformFormDefinitionData(data);
 
-        if (!finalData) {
-            console.log(`No record found with id: ${formId}`);
-            return null;
-        }
+      if (!finalData) {
+        console.log(`No record found with id: ${formId}`);
+        return null;
+      }
 
-        return finalData;
+      return finalData;
     } catch (error) {
-        console.error(`Error fetching data from formDefinition with id ${formId}:`, error);
-        throw error;
+      console.error(
+        `Error fetching data from formDefinition with id ${formId}:`,
+        error
+      );
+      throw error;
     }
   }
 
   /**
    * Generates metadata for fetched data.
-   * 
+   *
    * @param data - The data for which metadata is generated.
    * @returns An object containing metadata such as count and pagination details.
    */
@@ -272,13 +274,13 @@ class OfflineFetchService {
       totalCount: data?.length,
       pageNo: 1,
       limit: 5
-    }
+    };
   }
 
   /**
    * Fetches the list of offline submissions from the "applications" table.
    * Includes metadata for pagination or dashboard representation.
-   * 
+   *
    * @returns A promise resolving to an object containing submissions and metadata.
    * @throws Error if IndexedDB is unavailable or the table is missing.
    */
@@ -288,7 +290,7 @@ class OfflineFetchService {
         throw new Error("IndexedDB is not available.");
       }
       await ffDb.open();
-      const table = ffDb["applications"];  
+      const table = ffDb["applications"];
       if (!table) {
         throw new Error(`Table application not found in IndexedDB.`);
       }
@@ -303,9 +305,8 @@ class OfflineFetchService {
         ["applications"]: data,
         metadata
       };
-      
-      return finalData;
 
+      return finalData;
     } catch (error) {
       console.error(`Error fetching data from table application:`, error);
       throw error;
@@ -314,46 +315,54 @@ class OfflineFetchService {
 
   /**
    * Fetches a specific offline submission by ID from the "offlineSubmission" table.
-   * 
+   *
    * @param submissionId - The ID of the submission to retrieve.
    * @returns A promise resolving to the submission data or null if not found.
    * @throws Error if IndexedDB is unavailable or the table is missing.
    */
-  public static async fetchOfflineSubmissionById(submissionId: string): Promise<any> {
+  public static async fetchOfflineSubmissionById(
+    submissionId: string
+  ): Promise<any> {
     try {
-        if (!ffDb) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await ffDb.open();
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
 
-        // Get reference to the formDefinition table
-        const offlineSubmissions = ffDb["offlineSubmissions"];
+      // Get reference to the formDefinition table
+      const offlineSubmissions = ffDb["offlineSubmissions"];
 
-        if (!offlineSubmissions) {
-            throw new Error("Table offlineSubmission not found in IndexedDB.");
-        }
+      if (!offlineSubmissions) {
+        throw new Error("Table offlineSubmission not found in IndexedDB.");
+      }
 
-        // Fetch row by ID
-        const submission = await offlineSubmissions
-          .where("localSubmissionId")
-          .equals(submissionId)
-          .first();
-        if (!submission) {
-            console.log(`No record found with id: ${submissionId}`);
-            return null;
-        }
-        const updatedSubmission = DBServiceHelper.transformFinalSubmissionData(submission);
+      // Fetch row by ID
+      const submission = await offlineSubmissions
+        .where("localSubmissionId")
+        .equals(submissionId)
+        .first();
+      if (!submission) {
+        console.log(`No record found with id: ${submissionId}`);
+        return null;
+      }
+      const updatedSubmission =
+        DBServiceHelper.transformFinalSubmissionData(submission);
 
-        return updatedSubmission;
+      return updatedSubmission;
     } catch (error) {
-        console.error(`Error fetching data from offlineSubmission with id ${submissionId}:`, error);
-        throw error;
+      console.error(
+        `Error fetching data from offlineSubmission with id ${submissionId}:`,
+        error
+      );
+      throw error;
     }
   }
   /**
-     * Retrieves all form definitions from IndexedDB.
-     */
-  private static async getOriginalFormDefinitions(): Promise<IndividualFormDefinition[]> {
+   * Retrieves all form definitions from IndexedDB.
+   */
+  private static async getOriginalFormDefinitions(): Promise<
+    IndividualFormDefinition[]
+  > {
     try {
       if (!ffDb) {
         throw new Error("IndexedDB is not available.");
@@ -389,7 +398,10 @@ class OfflineFetchService {
       const totalCount = forms.length;
 
       // Transform and return the data
-      const finalData = DBServiceHelper.transformFormDefinitions(forms, totalCount);
+      const finalData = DBServiceHelper.transformFormDefinitions(
+        forms,
+        totalCount
+      );
       return finalData;
     } catch (error) {
       console.error("Error fetching and transforming form definitions:", error);
@@ -399,35 +411,43 @@ class OfflineFetchService {
 
   /**
    * Fetches offline drafts from the "offlineSubmission" table.
-   * 
+   *
    * @returns A promise resolving to the draft data or null if not found.
    * @throws Error if IndexedDB is unavailable or the table is missing.
    */
   public static async fetchOfflineDrafts(): Promise<any> {
     try {
-        if (!ffDb) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await ffDb.open();
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
 
-        // Get reference to the formDefinition table
-        const offlineSubmissions = ffDb["offlineSubmissions"];
+      // Get reference to the formDefinition table
+      const offlineSubmissions = ffDb["offlineSubmissions"];
 
-        if (!offlineSubmissions) {
-            throw new Error("Table offlineSubmission not found in IndexedDB.");
-        }
+      if (!offlineSubmissions) {
+        throw new Error("Table offlineSubmission not found in IndexedDB.");
+      }
 
-        // Fetch drafts by type      
-        const drafts = await offlineSubmissions.where("type").equals("draft").toArray();
-        const transformedDrafts = DBServiceHelper.tranformOfflineDrafts(drafts);
-        if (!transformedDrafts) {
-          console.log("No draft records found.");
-          return {drafts: [], applicationCount: 0, totalCount: 0}; // totalCount = draftsCount, applicationCount=submissionCount
-        }
-        return transformedDrafts;
+      // Fetch drafts by type
+      const drafts = await offlineSubmissions
+        .where("type")
+        .equals("draft")
+        .toArray();
+      drafts.sort((a, b) => (b.modified > a.modified ? 1 : -1));
+
+      const transformedDrafts = DBServiceHelper.tranformOfflineDrafts(drafts);
+      if (!transformedDrafts) {
+        console.log("No draft records found.");
+        return { drafts: [], applicationCount: 0, totalCount: 0 }; // totalCount = draftsCount, applicationCount=submissionCount
+      }
+      return transformedDrafts;
     } catch (error) {
-        console.error(`Error fetching data from offlineSubmission with offline draft information :`, error);
-        throw error;
+      console.error(
+        `Error fetching data from offlineSubmission with offline draft information :`,
+        error
+      );
+      throw error;
     }
   }
   /**
@@ -455,75 +475,83 @@ class OfflineFetchService {
 
   /**
    * Fetches a specific offline draft by ID from the "offlineSubmission" table.
-   * 
+   *
    * @param draftId - The ID of the draft to retrieve.
    * @returns A promise resolving to the draft data or null if not found.
    * @throws Error if IndexedDB is unavailable or the table is missing.
    */
   public static async fetchOfflineDraftById(draftId: string): Promise<any> {
     try {
-        const localDraftId = Number(draftId);
+      const localDraftId = Number(draftId);
 
-        if (isNaN(localDraftId)) {
-          console.error("Invalid draftId: Not a valid number");
-          return null;
-        }
-        if (!ffDb) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await ffDb.open();
+      if (isNaN(localDraftId)) {
+        console.error("Invalid draftId: Not a valid number");
+        return null;
+      }
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
 
-        // Get reference to the formDefinition table
-        const offlineSubmissions = ffDb["offlineSubmissions"];
+      // Get reference to the formDefinition table
+      const offlineSubmissions = ffDb["offlineSubmissions"];
 
-        if (!offlineSubmissions) {
-            throw new Error("Table offlineSubmission not found in IndexedDB.");
-        }
+      if (!offlineSubmissions) {
+        throw new Error("Table offlineSubmission not found in IndexedDB.");
+      }
 
-        // Fetch row by ID
-        const draft = await offlineSubmissions
-          .where("localDraftId")
-          .equals(localDraftId)
-          .first();
-        if (!draft) {
-            console.log(`No record found with localDraftId: ${localDraftId}`);
-            return null;
-        }
-        const updatedDraft = DBServiceHelper.transformEditDraftData(draft);
+      // Fetch row by ID
+      const draft = await offlineSubmissions
+        .where("localDraftId")
+        .equals(localDraftId)
+        .first();
+      if (!draft) {
+        console.log(`No record found with localDraftId: ${localDraftId}`);
+        return null;
+      }
+      const updatedDraft = DBServiceHelper.transformEditDraftData(draft);
 
-        return updatedDraft;
+      return updatedDraft;
     } catch (error) {
-        console.error(`Error fetching data from offlineSubmission with localDraftId ${draftId}:`, error);
-        throw error;
+      console.error(
+        `Error fetching data from offlineSubmission with localDraftId ${draftId}:`,
+        error
+      );
+      throw error;
     }
   }
 
-  public static async fetchOfflineFormProcessById(formId: string): Promise<any> {
+  public static async fetchOfflineFormProcessById(
+    formId: string
+  ): Promise<any> {
     try {
-        if (!ffDb) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await ffDb.open();
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
 
-        // Get reference to the formProcesses table
-        const table = ffDb["formProcesses"];
+      // Get reference to the formProcesses table
+      const table = ffDb["formProcesses"];
 
-        if (!table) {
-            throw new Error("Table formProcesses not found in IndexedDB.");
-        }
+      if (!table) {
+        throw new Error("Table formProcesses not found in IndexedDB.");
+      }
 
-        // Fetch row by ID
-        const data = await table.get(formId);
+      // Fetch row by ID
+      const data = await table.get(formId);
 
-        if (!data) {
-            console.log(`No record found with id: ${formId}`);
-            return null;
-        }
+      if (!data) {
+        console.log(`No record found with id: ${formId}`);
+        return null;
+      }
 
-        return data;
+      return data;
     } catch (error) {
-        console.error(`Error fetching data from formProcesses with id ${formId}:`, error);
-        throw error;
+      console.error(
+        `Error fetching data from formProcesses with id ${formId}:`,
+        error
+      );
+      throw error;
     }
   }
 
@@ -541,7 +569,7 @@ class OfflineFetchService {
       await ffDb.open();
       // Get the localDraftId from the activeForm table.
       const activeForm = await ffDb.activeForm.limit(1).first();
-      const localDraftId = parseInt(activeForm?.localDraftId);
+      const localDraftId = activeForm?.localDraftId;
       console.log(localDraftId);
       // Get all non active offline submissions.
       const submissions = await ffDb.offlineSubmissions
@@ -554,35 +582,37 @@ class OfflineFetchService {
       throw error;
     }
   }
-  
+
   public static async isDraftIdInActiveForm(draftId: string): Promise<boolean> {
     try {
-        const localDraftId = Number(draftId);
-        if (isNaN(localDraftId)) {
-            console.error("Invalid localDraftId: Not a valid number");
-            return false;
-        }
-        if (!ffDb) {
-            throw new Error("IndexedDB is not available.");
-        }
-
-        await ffDb.open();
-        const table = ffDb["activeForm"];
-
-        if (!table) {
-            throw new Error("Table 'activeForm' not found in IndexedDB.");
-        }
-
-        // Check if the draftId exists
-        const data = await table.get(localDraftId);
-        return !!data; // Return true if data exists, false otherwise
-
-    } catch (error) {
-        console.error(`Error checking draftId in activeForm with id ${draftId}:`, error);
+      const localDraftId = Number(draftId);
+      if (isNaN(localDraftId)) {
+        console.error("Invalid localDraftId: Not a valid number");
         return false;
+      }
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+
+      await ffDb.open();
+      const table = ffDb["activeForm"];
+
+      if (!table) {
+        throw new Error("Table 'activeForm' not found in IndexedDB.");
+      }
+
+      // Check if the draftId exists
+      const data = await table.get(localDraftId);
+      return !!data; // Return true if data exists, false otherwise
+    } catch (error) {
+      console.error(
+        `Error checking draftId in activeForm with id ${draftId}:`,
+        error
+      );
+      return false;
     }
   }
-  
+
   /**
    * Returns the unleased form IDs for a given form type.
    * @param formType - "12Hour", "24Hour", "VI"
@@ -598,13 +628,13 @@ class OfflineFetchService {
       const unleasedForms = await rsbcDb.formID
         .where("form_type")
         .equals(formType)
-        .filter(form => form.leased === false)
+        .filter((form) => form.leased === false)
         .toArray();
 
       return unleasedForms.map((form) => form.id);
     } catch (error) {
-        console.error(`Error fetching available form IDs from IndexedDB:`, error);
-        return [];
+      console.error(`Error fetching available form IDs from IndexedDB:`, error);
+      return [];
     }
   }
 
@@ -612,7 +642,9 @@ class OfflineFetchService {
    * Fetches the form availability data from the "formID" table in IndexedDB.
    * @param formType - "12Hour", "24Hour", "VI"
    */
-  public static async getNextAvailabeFormId(formType: string): Promise<string | null> {
+  public static async getNextAvailabeFormId(
+    formType: string
+  ): Promise<string | null> {
     try {
       if (!rsbcDb.formID) {
         throw new Error("FormID table is not available.");
@@ -625,13 +657,16 @@ class OfflineFetchService {
       const topUnleasedForm = await rsbcDb.formID
         .where("form_type")
         .equals(formType)
-        .and(form => form.leased === false)
+        .and((form) => form.leased === false)
         .sortBy("last_updated")
-        .then(forms => forms[0]);
+        .then((forms) => forms[0]);
 
       return topUnleasedForm ? topUnleasedForm.id : null;
     } catch (error) {
-      console.error(`Error fetching next available form ID from IndexedDB:`, error);
+      console.error(
+        `Error fetching next available form ID from IndexedDB:`,
+        error
+      );
       return null;
     }
   }
@@ -640,23 +675,26 @@ class OfflineFetchService {
    * Fetches the form unleased Ids data from the "formID" table in IndexedDB.
    * @return [{"form_type": string, "count": number}]
    */
-  public static async getFormAvailability(): Promise<{ form_type: string; count: number }[]> {
+  public static async getFormAvailability(): Promise<
+    { form_type: string; count: number }[]
+  > {
     try {
       if (!rsbcDb.formID) {
         throw new Error("FormID table is not available.");
       }
 
       const unleasedForms = await rsbcDb.formID
-        .filter(form => form.leased === false)
+        .filter((form) => form.leased === false)
         .toArray();
 
       const formTypeCounts: { [key: string]: number } = {};
-      unleasedForms.forEach(form => {
-        formTypeCounts[form.form_type] = (formTypeCounts[form.form_type] || 0) + 1;
+      unleasedForms.forEach((form) => {
+        formTypeCounts[form.form_type] =
+          (formTypeCounts[form.form_type] || 0) + 1;
       });
 
-      const result = Object.entries(formTypeCounts)
-        .map(([form_type, count]) => ({
+      const result = Object.entries(formTypeCounts).map(
+        ([form_type, count]) => ({
           form_type,
           count
         })
@@ -669,43 +707,42 @@ class OfflineFetchService {
     }
   }
 
-    /**
+  /**
    * Fetches the offline submission from the "applications" table based on ID.
    *
    * @returns A promise resolving to an object containing submission.
    * @throws Error if IndexedDB is unavailable or the table is missing.
    */
-    public static async fetchApplicationById(
-      applicationId: number
-    ): Promise<any> {
-      try {
-        if (!ffDb) {
-          throw new Error("IndexedDB is not available.");
-        }
-        await ffDb.open();
-        // Get reference to the formDefinition table
-        const offlineApplications = ffDb["applications"];
-        if (!offlineApplications) {
-          throw new Error("Table application not found in IndexedDB.");
-        }
-        // Fetch row by ID
-        const application = await offlineApplications
-          .where("id")
-          .equals(Number(applicationId))
-          .first();
-        if (!application) {
-          console.log(`No record found with id: ${applicationId}`);
-          return null;
-        }
-        return application;
-      } catch (error) {
-        console.error(
-          `Error fetching data from application with id ${applicationId}:`,
-          error
-        );
-        throw error;
+  public static async fetchApplicationById(
+    applicationId: number
+  ): Promise<any> {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
       }
+      await ffDb.open();
+      // Get reference to the formDefinition table
+      const offlineApplications = ffDb["applications"];
+      if (!offlineApplications) {
+        throw new Error("Table application not found in IndexedDB.");
+      }
+      // Fetch row by ID
+      const application = await offlineApplications
+        .where("id")
+        .equals(Number(applicationId))
+        .first();
+      if (!application) {
+        console.log(`No record found with id: ${applicationId}`);
+        return null;
+      }
+      return application;
+    } catch (error) {
+      console.error(
+        `Error fetching data from application with id ${applicationId}:`,
+        error
+      );
+      throw error;
     }
-
+  }
 }
 export default OfflineFetchService;
