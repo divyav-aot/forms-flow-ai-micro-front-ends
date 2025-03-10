@@ -49,7 +49,7 @@ class OfflineSubmissions {
     draftSubmissions.forEach(async (draft) => {
       if (
         draft.localDraftId &&
-        draft.draftData.serverDraftId &&
+        draft.serverDraftId &&
         draft.draftData.serverApplicationId
       ) {
         // When localDraftId is present if both serverDraftId, serverApplicationId
@@ -59,7 +59,7 @@ class OfflineSubmissions {
       }
       if (
         draft.localDraftId &&
-        !draft.draftData.serverDraftId &&
+        !draft.serverDraftId &&
         !draft.draftData.serverApplicationId
       ) {
         // When localDraftId is present without serverDraftId, serverApplicationId
@@ -96,7 +96,7 @@ class OfflineSubmissions {
     draft: OfflineSubmission
   ): Promise<void> {
     console.log(draft);
-    const url = `${WEB_BASE_URL}/draft/${draft.draftData.serverDraftId}`;
+    const url = `${WEB_BASE_URL}/draft/${draft.serverDraftId}`;
     const payload = {
       data: draft.data,
       formId: draft.formId
@@ -119,7 +119,7 @@ class OfflineSubmissions {
     submittedData.forEach(async (data) => {
       if (
         data.localDraftId &&
-        data.draftData.serverDraftId &&
+        data.serverDraftId &&
         data.draftData.serverApplicationId
       ) {
         // When localDraftId is present if both serverDraftId, serverApplicationId
@@ -129,7 +129,7 @@ class OfflineSubmissions {
       }
       if (
         data.localDraftId &&
-        !data.draftData.serverDraftId &&
+        !data.serverDraftId &&
         !data.draftData.serverApplicationId
       ) {
         // When localDraftId is present without serverDraftId, serverApplicationId
@@ -240,7 +240,7 @@ class OfflineSubmissions {
         async (response: FormioCreateResponse) => {
           await this.triggerApplicationUpdate(
             response,
-            data.draftData?.serverDraftId
+            data?.serverDraftId
           );
           await this.deleteLocalSubmissions(data);
         }
