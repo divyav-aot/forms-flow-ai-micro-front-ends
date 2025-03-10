@@ -252,7 +252,10 @@ class OfflineSaveService {
    * Inserts submission data into IndexedDB.
    * @param {any} draft - Submission data to be stored.
    */
-  public static async insertOrUpdateOfflineDraftData (draft: any, serverDraftId: number | null = null): Promise<Record<string, any>> {
+  public static async insertOfflineDraftData (
+    draft: any, 
+    serverDraftId: number | null = null
+  ): Promise<Record<string, any>> {
     try {
       const formId = draft?.formId;
       if (!formId) {
@@ -266,28 +269,8 @@ class OfflineSaveService {
       const formData = formId ? await OfflineFetchService.fetchOfflineFormById(formId) : {};
       const offlineDraft = DBServiceHelper.constructOfflineDraftData(draft, formId, formData, now);
       let draftResponse: Record<string, any>;
-      if (serverDraftId) {
-        const existingSubmission = await offlineSubmissions
-            .where("serverDraftId")
-            .equals(serverDraftId)
-            .first(); // Fetch the first matching record
+      await ffDb.offlineSubmissions.put(offlineDraft);
 
-        if (existingSubmission) {
-            // Update existing record with new data and modified timestamp
-            await offlineSubmissions.update(existingSubmission._id, {
-                data: draft?.data,
-                modified: now
-            });
-            draftResponse = DBServiceHelper.constructDraftResponse(existingSubmission.draftData?.localApplicationId, existingSubmission?.localDraftId, now, draft?.data, existingSubmission?._id);
-        } else {
-            // If no existing record, insert a new one
-            await ffDb.offlineSubmissions.put(offlineDraft);
-        }
-    } else {
-        // If serverDraftId is null, insert a new entry
-        await ffDb.offlineSubmissions.put(offlineDraft);
-    }
-      
       const activeFormData = {
         localDraftId: offlineDraft?.localDraftId,
         serverDraftId: serverDraftId ?? null

@@ -63,13 +63,14 @@ class DBServiceHelper {
         serverApplicationId: number
     ): OfflineSubmission {
         const submissionData = this.constructSubmissionDataObject(submission);
-        const draftData = {serverDraftId, serverApplicationId}
+        const draftData = {serverApplicationId}
         const _id = this.generateGUID();
         const submissionId = this.generateGUID();
         const now = new Date().toISOString();
         return {
             _id,
             localSubmissionId: submissionId,
+            serverDraftId: serverDraftId,
             submissionData,
             draftData,
             created: now,
