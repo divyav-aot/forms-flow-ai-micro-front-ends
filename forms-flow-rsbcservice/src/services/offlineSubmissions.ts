@@ -169,12 +169,11 @@ class OfflineSubmissions {
     try {
       console.log(data);
       const formioUrl = `${API_URL}/form/${data.formId}/submission`;
-      // todo: get state and _vnote from indexdb
       const formioPayload = {
         data: data.data,
         metadata: data.submissionData?.metadata,
-        state: "submitted",
-        _vnote: ""
+        state: data.submissionData?.state,
+        _vnote: data.submissionData?._vnote
       };
       const header = { "x-jwt-token": localStorage.getItem("formioToken") };
       console.log(formioUrl, formioPayload);
@@ -238,10 +237,7 @@ class OfflineSubmissions {
     try {
       this.prepareAndSubmitFormioSubmission(data).then(
         async (response: FormioCreateResponse) => {
-          await this.triggerApplicationUpdate(
-            response,
-            data?.serverDraftId
-          );
+          await this.triggerApplicationUpdate(response, data?.serverDraftId);
           await this.deleteLocalSubmissions(data);
         }
       );
