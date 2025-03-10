@@ -45,7 +45,7 @@ class DBServiceHelper {
             externalIds: [],
             roles: [],
             access: [],
-            state: "",
+            state: "submitted",
             _vnote: ""
         };
     }
