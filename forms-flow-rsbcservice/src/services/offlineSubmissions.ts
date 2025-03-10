@@ -1,10 +1,15 @@
 import { RequestService } from "@formsflow/service";
-import { WEB_BASE_URL } from "../endpoints/config";
+import { API_URL, WEB_BASE_URL } from "../endpoints/config";
 import {
   OfflineDeleteService,
   OfflineFetchService
 } from "../formsflow-rsbcservices";
 import { OfflineSubmission } from "../storage/ffDb";
+import {
+  FormData,
+  FormioCreateResponse,
+  RequestCreateFormat
+} from "./offlineSubmissions.interface";
 
 class OfflineSubmissions {
   /**
@@ -25,8 +30,7 @@ class OfflineSubmissions {
       // Wait for both processes to finish
       await Promise.all([processDraftsPromise, processSubmissionPromise]);
 
-      // Deleting local submissions only after both processes are complete.
-      await this.deleteLocalSubmissions(submissions);
+      // todo: localSubmisionid and submisssionid
     } catch (error) {
       console.error("Error processing drafts or submissions:", error);
     }
@@ -79,7 +83,9 @@ class OfflineSubmissions {
       data: draft.data,
       formId: draft.formId
     };
-    await RequestService.httpPOSTRequest(url, payload);
+    RequestService.httpPOSTRequest(url, payload).then(
+      async () => await this.deleteLocalSubmissions(draft)
+    );
   }
 
   /**
@@ -95,8 +101,12 @@ class OfflineSubmissions {
       data: draft.data,
       formId: draft.formId
     };
-    RequestService.httpPUTRequest(url, payload);
+    RequestService.httpPUTRequest(url, payload).then(
+      async () => await this.deleteLocalSubmissions(draft)
+    );
   }
+
+  // TODO: add logic/adjust in  service worker to enable backgroundsync in only draft disabale case
 
   /**
    * Process the submissions.
@@ -105,9 +115,8 @@ class OfflineSubmissions {
   private static async processSubmission(
     submissions: OfflineSubmission[]
   ): Promise<void> {
-    // TODO: EDIT type
     const submittedData = submissions.filter(
-      (submission) => submission.type === "submit"
+      (submission) => submission.type === "application"
     );
     submittedData.forEach(async (data) => {
       if (
@@ -140,9 +149,76 @@ class OfflineSubmissions {
   private static async prepareAndSubmitSubmission(
     data: OfflineSubmission
   ): Promise<void> {
-    console.log(data);
-    // todo: first call to formio,
-    // todo: 2nd call to server
+    try {
+      this.prepareAndSubmitFormioSubmission(data).then(
+        async (response: FormioCreateResponse) => {
+          await this.triggerApplicationCreate(response);
+          await this.deleteLocalSubmissions(data);
+        }
+      );
+    } catch (error) {
+      console.error("Error creating the submission:", error);
+    }
+  }
+
+  /**
+   * Prepare and submit formio submission.
+   * @param data submission need to be submitted in DB
+   */
+  private static async prepareAndSubmitFormioSubmission(
+    data: OfflineSubmission
+  ): Promise<any> {
+    try {
+      console.log(data);
+      const formioUrl = `${API_URL}/form/${data.formId}/submission`;
+      // todo: get state and _vnote from indexdb
+      const formioPayload = {
+        data: data.data,
+        metadata: data.submissionData?.metadata,
+        state: "submitted",
+        _vnote: ""
+      };
+      return RequestService.httpPOSTRequest(formioUrl, formioPayload);
+    } catch (error) {
+      console.error("Error creating the formio submission:", error);
+    }
+  }
+
+  /**
+   * Function which will trigger the "application/create" API.
+   * @param data, data that need to processed to pass to the API.
+   */
+  private static async triggerApplicationCreate(
+    data: FormioCreateResponse
+  ): Promise<void> {
+    try {
+      // Process and transform the data.
+      const submissionData = this.prepareApplicationPayload(data);
+      // API URL
+      const URL = `${WEB_BASE_URL}/application/create`;
+      // Calling the API
+      await RequestService.httpPOSTRequest(URL, submissionData);
+    } catch (error) {
+      console.error("Error creating the submission:", error);
+    }
+  }
+
+  /**
+   * Function to prepare appliaction payload.
+   * @param data, data that need to processed to pass to the API.
+   */
+  private static prepareApplicationPayload(
+    data: FormioCreateResponse
+  ): RequestCreateFormat {
+    // Get the origin.
+    const origin = `${window.location.origin}/`;
+    // Process and transform the data.
+    return this.getProcessReq(
+      { _id: data?.response?.form },
+      data?.response?._id,
+      origin,
+      data?.response?.data
+    );
   }
 
   /**
@@ -153,28 +229,92 @@ class OfflineSubmissions {
     data: OfflineSubmission
   ): Promise<void> {
     console.log(data);
-    // todo: first call to formio,
-    // todo: 2nd call to server
-    // todo: delete the draft entry form the server db??
+    try {
+      this.prepareAndSubmitFormioSubmission(data).then(
+        async (response: FormioCreateResponse) => {
+          await this.triggerApplicationUpdate(
+            response,
+            data.draftData?.serverDraftId
+          );
+          await this.deleteLocalSubmissions(data);
+        }
+      );
+    } catch (error) {
+      console.error("Error creating and updating the submission:", error);
+    }
+    // todo nd test: delete the draft entry form the server db, need to update the sttaus from 1 to 0??
+  }
+
+  /**
+   * Function which will trigger the "draft/<drat_id>/submit" update API.
+   * @param data, data that need to processed to pass to the API.
+   * @param draft_id , server draft id, which need to be updated.
+   */
+  private static async triggerApplicationUpdate(
+    data: FormioCreateResponse,
+    draft_id: number | string
+  ): Promise<void> {
+    try {
+      // Process and transform the data.
+      const submissionData = this.prepareApplicationPayload(data);
+      // API URL
+      const URL = `${WEB_BASE_URL}/draft/${draft_id}/submit`;
+      // Calling the API
+      await RequestService.httpPUTRequest(URL, submissionData);
+    } catch (error) {
+      console.error("Error creating the submission:", error);
+    }
   }
 
   /**
    * Delete local submissions after processing.
-   * @param submissions list of offline submissions that need to be processed.
+   * @param submissions offline submissions that need to be deleted after the process.
    */
   private static async deleteLocalSubmissions(
-    submissions: OfflineSubmission[]
+    submission: OfflineSubmission
   ): Promise<void> {
-    const localSubmissionIdsToDelete = submissions.map(
-      (submission) => submission._id
+    await OfflineDeleteService.deleteOfflineSubmission(submission._id);
+    await OfflineDeleteService.deleteApplicationWithLocalSubmissionId(
+      submission._id
     );
-    console.log(
-      localSubmissionIdsToDelete,
-      "+++++++++++++localSubmissionIdsToDelete"
-    );
-    await OfflineDeleteService.bulkOfflineSubmissionDelete(
-      localSubmissionIdsToDelete
-    );
+  }
+
+  /**
+   * Function to form formio submission url.
+   * @param formId, form id.
+   * @param submissionId , submission id.
+   * @returns formio submission url.
+   */
+  private static getFormUrlWithFormIdSubmissionId(
+    formId: string | number,
+    submissionId: string | number
+  ): string {
+    return `${WEB_BASE_URL}/form/${formId}/submission/${submissionId}`;
+  }
+
+  /**
+   * Function to prepare the payload for submission create and update
+   * from the formio create response.
+   * @param form, object with formId.
+   * @param submissionId, submission id.
+   * @param origin, origin of the current URL.
+   * @param submissionData, submission data.
+   * @returns the prepared payload for the create or update.
+   */
+  private static getProcessReq(
+    form: { _id: string | number },
+    submissionId: string | number,
+    origin: string,
+    submissionData: FormData
+  ): RequestCreateFormat {
+    const requestFormat: RequestCreateFormat = {
+      formId: form._id,
+      submissionId: submissionId,
+      formUrl: this.getFormUrlWithFormIdSubmissionId(form._id, submissionId),
+      webFormUrl: `${origin}form/${form._id}/submission/${submissionId}`,
+      data: submissionData
+    };
+    return requestFormat;
   }
 }
 export default OfflineSubmissions;
