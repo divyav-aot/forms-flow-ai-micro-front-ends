@@ -38,7 +38,9 @@ class DBServiceHelper {
             owner: userDetails?.email,
             externalIds: [],
             roles: [],
-            access: []
+            access: [],
+            state: "",
+            _vnote: ""
         };
     }
 
@@ -245,7 +247,7 @@ class DBServiceHelper {
          * @returns {object} - The constructed offline submission data.
          */
     public static constructOfflineDraftData(draft: any, formId: string, formData: any): {
-        inputDraft: Record<string, any>;
+        inputDraft: OfflineSubmission;
         res: Record<string, any>;
     } {
         const userDetails = this.getUserDetails();
@@ -254,8 +256,8 @@ class DBServiceHelper {
         const CreatedBy = userDetails?.preferred_username;
         const DraftName = formData?.form?.title;
         const localApplicationId = this.generateRandomNumber();
-        const serverDraftId=draft?.serverDraftId;
-        const serverApplicationId="";
+        const serverDraftId= draft?.serverDraftId ? Number(draft.serverDraftId) : null;
+        const serverApplicationId = null;
         const formType = formData?.form?.type || "";
         const processKey = "";
         const processName = "";

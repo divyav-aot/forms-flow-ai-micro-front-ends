@@ -209,7 +209,7 @@ class OfflineSaveService {
    * Inserts submission data into IndexedDB.
    * @param {any} draft - Submission data to be stored.
    */
-  public static async insertOfflineDraftData (draft: any, serverDraftId: string | null = null): Promise<Record<string, any>> {
+  public static async insertOfflineDraftData (draft: any, serverDraftId: number | null = null): Promise<Record<string, any>> {
     try {
       const formId = draft?.formId;
       if (!formId) {
@@ -223,7 +223,11 @@ class OfflineSaveService {
         serverDraftId: serverDraftId ?? null
       };
       await this.saveFFDataToIndexedDB("activeForm", activeFormData);
-      return offlineDraft?.res;
+      const transformedDrafts = DBServiceHelper.transformEditDraftData(offlineDraft?.inputDraft)
+      return {
+        res: offlineDraft?.res,
+        draftDetails: transformedDrafts
+      };
     } catch (error) {
       console.error("Error processing offline draft or application data:", error);
     }

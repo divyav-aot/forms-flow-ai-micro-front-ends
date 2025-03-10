@@ -112,11 +112,11 @@ interface DraftData {
 }
 
 export interface SubmissionData {
-  owner: string;
-  access: any[];
-  externalIds: any[];
-  roles: any[];
-  metadata: Record<string, any>;
+  owner?: string;
+  access?: any[];
+  externalIds?: any[];
+  roles?: any[];
+  metadata?: Record<string, any>;
   state?: string;
   _vnote?: string;
 }
