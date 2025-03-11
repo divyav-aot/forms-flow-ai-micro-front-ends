@@ -1,5 +1,11 @@
 import { rsbcDb } from "./rsbcDb";
-import { ffDb, IndividualFormDefinition, ActiveForm, FormProcess } from "./ffDb";
+import {
+  ffDb,
+  IndividualFormDefinition,
+  ActiveForm,
+  FormProcess,
+  OfflineSubmission,
+} from "./ffDb";
 import { fetchStaticData } from "../request/staticDataApi";
 import { handleError } from "../helpers/helperServices";
 import { StaticResources } from "../constants/constants";
@@ -8,16 +14,22 @@ import DBServiceHelper from "../helpers/helperDbServices";
 import { fetchFormIDs } from "../request/formIdApi";
 import { getUserData } from "../request/getUserDataApi";
 import { getUserRoles } from "../request/getUserRolesApi";
-import { REACT_APP_FORM_ID_12HOUR_LIMIT, REACT_APP_FORM_ID_24HOUR_LIMIT, REACT_APP_FORM_ID_VI_LIMIT } from "./config";
+import {
+  REACT_APP_FORM_ID_12HOUR_LIMIT,
+  REACT_APP_FORM_ID_24HOUR_LIMIT,
+  REACT_APP_FORM_ID_VI_LIMIT,
+} from "./config";
 
 class OfflineSaveService {
-  
   /**
    * Saves RSBC static data to IndexedDB.
    * @param {string} resourceName - The name of the resource.
    * @param {any} data - The data to be saved.
    */
-  private static async saveRSBCDataToIndexedDB(resourceName: string, data: any) {
+  private static async saveRSBCDataToIndexedDB(
+    resourceName: string,
+    data: any
+  ) {
     try {
       // Check if IndexedDB is available
       if (!rsbcDb) {
@@ -99,7 +111,7 @@ class OfflineSaveService {
           await rsbcDb.userRoles.clear();
           await rsbcDb.userRoles.bulkPut(data);
           console.log("User roles saved to IndexedDB.");
-          break;  
+          break;
         default:
           console.log(`No matching table found for resource: ${resourceName}`);
       }
@@ -118,12 +130,12 @@ class OfflineSaveService {
 
       // Create an array of promises for fetching data
       const fetchPromises = StaticResources.map(async (resource) => {
-        try {              
-            await fetchStaticData(
-              resource,
-              (data: any) => this.saveRSBCDataToIndexedDB(resource, data),
-              (error: any) => handleError(error)
-            );          
+        try {
+          await fetchStaticData(
+            resource,
+            (data: any) => this.saveRSBCDataToIndexedDB(resource, data),
+            (error: any) => handleError(error)
+          );
         } catch (error) {
           console.error(`Error processing resource ${resource}:`, error);
         }
@@ -138,7 +150,9 @@ class OfflineSaveService {
     }
   }
 
-  public static async saveOfflineFormDefinition(form: IndividualFormDefinition): Promise<void> {
+  public static async saveOfflineFormDefinition(
+    form: IndividualFormDefinition
+  ): Promise<void> {
     try {
       if (!ffDb) {
         throw new Error("IndexedDB is not available.");
@@ -191,7 +205,7 @@ class OfflineSaveService {
     } catch (error) {
       console.error(`Error saving ${resourceName} to IndexedDB:`, error);
     }
-  }  
+  }
 
   /**
    * Fetches user data and roles from API and saves it to IndexedDB.
@@ -199,7 +213,7 @@ class OfflineSaveService {
   public static async fetchAndSaveUserDataAndRoles(): Promise<void> {
     // get user data
     const userDetails = DBServiceHelper.getUserDetails();
-    
+
     let userId = null;
     if (userDetails?.identity_provider === "idir") {
       userId = userDetails.idir_user_guid;
@@ -215,7 +229,7 @@ class OfflineSaveService {
         (error: any) => handleError(error)
       );
     }
-    
+
     // get user roles
     await getUserRoles(
       DBServiceHelper.getAuthorizationToken(),
@@ -223,27 +237,56 @@ class OfflineSaveService {
       (error: any) => handleError(error)
     );
   }
-  
+
   /**
    * Inserts submission data into IndexedDB.
    * @param {any} data - Submission data to be stored.
    * @param {string} formId - Form ID associated with the submission.
    */
-  public static async insertOfflineSubmissionData (
-    data: any, 
-    formId: string, 
-    serverDraftId: number, 
+  public static async insertOfflineSubmissionData(
+    data: any,
+    formId: string,
+    serverDraftId: string,
     serverApplicationId: number
   ): Promise<{ status: string; message?: string }> {
     try {
+      let draft = await OfflineFetchService.fetchOfflineSubmissionByInputId(
+        serverDraftId,
+        "serverDraftId"
+      );
+      if (!draft) {
+        draft = DBServiceHelper.constructOfflineSubmissionData(
+          data,
+          formId,
+          serverDraftId,
+          serverApplicationId
+        );
+      } else {
+        draft = DBServiceHelper.constructUpdateOfflineSubmissionData(
+          draft,
+          data,
+          serverDraftId
+        );
+      }
       const formData = await OfflineFetchService.fetchOfflineFormById(formId);
-      const submissionData = DBServiceHelper.constructOfflineSubmissionData(data, formId, serverDraftId, serverApplicationId);
-      const applicationData = DBServiceHelper.constructApplicationData(formId, submissionData.localSubmissionId, formData);
-      await this.saveFFDataToIndexedDB("offlineSubmission", submissionData);
+
+      const applicationData = DBServiceHelper.constructApplicationData(
+        formId,
+        draft.localSubmissionId,
+        formData
+      );
+      await this.saveFFDataToIndexedDB("offlineSubmission", draft);
       await this.saveFFDataToIndexedDB("applications", applicationData);
-      return { status: "success", message: `Submission inserted successfully.` };
+      await ffDb.activeForm.clear();
+      return {
+        status: "success",
+        message: `Submission inserted successfully.`,
+      };
     } catch (error) {
-      console.error(`Error processing offline submission or application data:`, error);
+      console.error(
+        `Error processing offline submission or application data:`,
+        error
+      );
       return { status: "error", message: error.message };
     }
   }
@@ -252,8 +295,8 @@ class OfflineSaveService {
    * Inserts submission data into IndexedDB.
    * @param {any} draft - Submission data to be stored.
    */
-  public static async insertOfflineDraftData (
-    draft: any, 
+  public static async insertOfflineDraftData(
+    draft: any,
     serverDraftId: number | null = null
   ): Promise<Record<string, any>> {
     try {
@@ -262,30 +305,47 @@ class OfflineSaveService {
         console.warn("No valid formId found. Using empty formData.");
       }
       const offlineSubmissions = ffDb["offlineSubmissions"];
-        if (!offlineSubmissions) {
-            throw new Error("Table offlineSubmissions not found in IndexedDB.");
-        }
+      if (!offlineSubmissions) {
+        throw new Error("Table offlineSubmissions not found in IndexedDB.");
+      }
       const now = new Date().toISOString();
-      const formData = formId ? await OfflineFetchService.fetchOfflineFormById(formId) : {};
-      const offlineDraft = DBServiceHelper.constructOfflineDraftData(draft, formId, formData, now);
+      const formData = formId
+        ? await OfflineFetchService.fetchOfflineFormById(formId)
+        : {};
+      const offlineDraft = DBServiceHelper.constructOfflineDraftData(
+        draft,
+        formId,
+        formData,
+        now
+      );
       let draftResponse: Record<string, any>;
       await ffDb.offlineSubmissions.put(offlineDraft);
 
       const activeFormData = {
         localDraftId: offlineDraft?.localDraftId,
-        serverDraftId: serverDraftId ?? null
+        serverDraftId: serverDraftId ?? null,
       };
       await this.saveFFDataToIndexedDB("activeForm", activeFormData);
-      const transformedDrafts = DBServiceHelper.transformEditDraftData(offlineDraft);
+      const transformedDrafts =
+        DBServiceHelper.transformEditDraftData(offlineDraft);
       if (!serverDraftId) {
-        draftResponse = DBServiceHelper.constructDraftResponse(offlineDraft?.draftData?.localApplicationId, offlineDraft?.localDraftId, now, draft?.data, offlineDraft?._id);
+        draftResponse = DBServiceHelper.constructDraftResponse(
+          offlineDraft?.draftData?.localApplicationId,
+          offlineDraft?.localDraftId,
+          now,
+          draft?.data,
+          offlineDraft?._id
+        );
       }
       return {
         res: draftResponse,
-        draftDetails: transformedDrafts
+        draftDetails: transformedDrafts,
       };
     } catch (error) {
-      console.error("Error processing offline draft or application data:", error);
+      console.error(
+        "Error processing offline draft or application data:",
+        error
+      );
     }
   }
 
@@ -294,35 +354,8 @@ class OfflineSaveService {
     data: ActiveForm
   ): Promise<{ status: string; message?: string }> {
     try {
-        if (!ffDb) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await ffDb.open();
-
-        // Get reference to the specified table
-        const table = ffDb["activeForm"];
-
-        if (!table) {
-            throw new Error(`Table activeForm not found in IndexedDB.`);
-        }
-
-        // Insert the record into IndexedDB
-        await table.clear();
-        await table.put(data);
-
-        return { status: "success", message: `Data inserted into activeForm successfully.` };
-    } catch (error) {
-        console.error(`Error inserting data into activeForm:`, error);
-        return { status: "failure", message: error.message };
-    }
-  }
-
-  public static async saveActiveFormDataByServerDraftId(
-    serverDraftId: number
-  ): Promise<{ status: string; message?: string }> {
-    try {
       if (!ffDb) {
-          throw new Error("IndexedDB is not available.");
+        throw new Error("IndexedDB is not available.");
       }
       await ffDb.open();
 
@@ -330,29 +363,58 @@ class OfflineSaveService {
       const table = ffDb["activeForm"];
 
       if (!table) {
-          throw new Error(`Table activeForm not found in IndexedDB.`);
+        throw new Error(`Table activeForm not found in IndexedDB.`);
+      }
+
+      // Insert the record into IndexedDB
+      await table.clear();
+      await table.put(data);
+
+      return {
+        status: "success",
+        message: `Data inserted into activeForm successfully.`,
+      };
+    } catch (error) {
+      console.error(`Error inserting data into activeForm:`, error);
+      return { status: "failure", message: error.message };
+    }
+  }
+
+  public static async saveActiveFormDataByServerDraftId(
+    serverDraftId: string
+  ): Promise<{ status: string; message?: string }> {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
+
+      // Get reference to the specified table
+      const table = ffDb["activeForm"];
+
+      if (!table) {
+        throw new Error(`Table activeForm not found in IndexedDB.`);
       }
       if (serverDraftId) {
-        const offlineSubmissions = ffDb["offlineSubmissions"];
-        if (!offlineSubmissions) {
-            return { status: "failure", message: "Table offlineSubmissions not found in IndexedDB." };
-        }
-        const existingSubmission = await offlineSubmissions
-            .where("serverDraftId")
-            .equals(serverDraftId)
-            .first(); // Fetch the first matching record
-
+        const existingSubmission =
+          await OfflineFetchService.fetchOfflineSubmissionByInputId(
+            serverDraftId,
+            "serverDraftId"
+          );
         if (existingSubmission) {
-            // Update existing record with new data and modified timestamp
-            const data = {
-              localDraftId: existingSubmission?.localDraftId,
-              serverDraftId: serverDraftId
-            }
-            await table.clear();
-            await table.put(data);
+          // Update existing record with new data and modified timestamp
+          const data = {
+            localDraftId: existingSubmission?.localDraftId,
+            serverDraftId: parseInt(serverDraftId),
+          };
+          await table.clear();
+          await table.put(data);
         }
       }
-      return { status: "success", message: `Data inserted into activeForm successfully.` };
+      return {
+        status: "success",
+        message: `Data inserted into activeForm successfully.`,
+      };
     } catch (error) {
       console.error(`Error inserting data into activeForm:`, error);
       return { status: "failure", message: error.message };
@@ -361,7 +423,7 @@ class OfflineSaveService {
 
   /**
    * Inserts form process data into the formProcesses table in IndexedDB.
-   * 
+   *
    * @param data - Array of form process objects to insert
    * @returns A promise that resolves to an object with status and message
    * @throws Error if IndexedDB is unavailable or insertion fails.
@@ -389,9 +451,9 @@ class OfflineSaveService {
 
       await table.bulkPut(data);
 
-      return { 
-        status: "success", 
-        message: `Successfully inserted ${data.length} form processes.` 
+      return {
+        status: "success",
+        message: `Successfully inserted ${data.length} form processes.`,
       };
     } catch (error) {
       console.error(`Error inserting data into formProcesses:`, error);
@@ -416,14 +478,23 @@ class OfflineSaveService {
         return acc;
       }, {});
 
-      const required12Hour = Math.max(0, REACT_APP_FORM_ID_12HOUR_LIMIT - (countByFormType["12Hour"] || 0));
-      const required24Hour = Math.max(0, REACT_APP_FORM_ID_24HOUR_LIMIT - (countByFormType["24Hour"] || 0));
-      const requiredVI = Math.max(0, REACT_APP_FORM_ID_VI_LIMIT - (countByFormType["VI"] || 0));
+      const required12Hour = Math.max(
+        0,
+        REACT_APP_FORM_ID_12HOUR_LIMIT - (countByFormType["12Hour"] || 0)
+      );
+      const required24Hour = Math.max(
+        0,
+        REACT_APP_FORM_ID_24HOUR_LIMIT - (countByFormType["24Hour"] || 0)
+      );
+      const requiredVI = Math.max(
+        0,
+        REACT_APP_FORM_ID_VI_LIMIT - (countByFormType["VI"] || 0)
+      );
       try {
         const requiredIds = {
           "12Hour": required12Hour,
           "24Hour": required24Hour,
-          "VI": requiredVI,
+          VI: requiredVI,
         };
 
         await fetchFormIDs(
@@ -439,7 +510,7 @@ class OfflineSaveService {
               spoiled_timestamp: item.spoiled_timestamp,
               last_updated: new Date().toISOString(),
             }));
-            if(formIdData && formIdData.length > 0){
+            if (formIdData && formIdData.length > 0) {
               await this._saveForIdDataToIndexedDB(formIdData);
             }
           },
@@ -467,16 +538,26 @@ class OfflineSaveService {
    * @param formId - The form ID.
    * @param formType - The form type.
    */
-  public static async markFormAsLeased(formId: number, formType: string): Promise<void> {
+  public static async markFormAsLeased(
+    formId: number,
+    formType: string
+  ): Promise<void> {
     try {
       if (!rsbcDb.formID) {
         throw new Error("FormID table is not available.");
       }
-      const form = await rsbcDb.formID.where({ id: formId, form_type: formType }).first();
+      const form = await rsbcDb.formID
+        .where({ id: formId, form_type: formType })
+        .first();
       if (!form) {
-        throw new Error(`Form with ID ${formId} and type ${formType} not found.`);
+        throw new Error(
+          `Form with ID ${formId} and type ${formType} not found.`
+        );
       }
-      await rsbcDb.formID.update(form.id, { leased: true, last_updated: new Date().toISOString() });
+      await rsbcDb.formID.update(form.id, {
+        leased: true,
+        last_updated: new Date().toISOString(),
+      });
     } catch (error) {
       console.error(`Error updating lease status in IndexedDB:`, error);
     }
@@ -487,7 +568,7 @@ class OfflineSaveService {
    * @param data - list of formID data to be saved.
    * @private
    */
-  private static async _saveForIdDataToIndexedDB(data: any) : Promise<void> {
+  private static async _saveForIdDataToIndexedDB(data: any): Promise<void> {
     try {
       if (!rsbcDb) {
         throw new Error("IndexedDB is not available.");
@@ -500,6 +581,5 @@ class OfflineSaveService {
       console.error(`Error saving formID to IndexedDB:`, error);
     }
   }
-
 }
 export default OfflineSaveService;
