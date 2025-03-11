@@ -6,6 +6,8 @@ import { StaticResources } from "../constants/constants";
 import OfflineFetchService from "./dbFetchServices";
 import DBServiceHelper from "../helpers/helperDbServices";
 import { fetchFormIDs } from "../request/formIdApi";
+import { getUserData } from "../request/getUserDataApi";
+import { getUserRoles } from "../request/getUserRolesApi";
 import { REACT_APP_FORM_ID_12HOUR_LIMIT, REACT_APP_FORM_ID_24HOUR_LIMIT, REACT_APP_FORM_ID_VI_LIMIT } from "./config";
 
 class OfflineSaveService {
@@ -88,6 +90,16 @@ class OfflineSaveService {
           await rsbcDb.jurisdictionCountry.bulkPut(data);
           console.log("Jurisdiction Country data saved to IndexedDB.");
           break;
+        case "user":
+          await rsbcDb.user.clear();
+          await rsbcDb.user.put(data);
+          console.log("User data saved to IndexedDB.");
+          break;
+        case "userRoles":
+          await rsbcDb.userRoles.clear();
+          await rsbcDb.userRoles.bulkPut(data);
+          console.log("User roles saved to IndexedDB.");
+          break;  
         default:
           console.log(`No matching table found for resource: ${resourceName}`);
       }
@@ -180,6 +192,37 @@ class OfflineSaveService {
       console.error(`Error saving ${resourceName} to IndexedDB:`, error);
     }
   }  
+
+  /**
+   * Fetches user data and roles from API and saves it to IndexedDB.
+   */
+  public static async fetchAndSaveUserDataAndRoles(): Promise<void> {
+    // get user data
+    const userDetails = DBServiceHelper.getUserDetails();
+    
+    let userId = null;
+    if (userDetails?.identity_provider === "idir") {
+      userId = userDetails.idir_user_guid;
+    } else if (userDetails?.identity_provider === "bceid") {
+      userId = userDetails.bceid_user_guid;
+    } else {
+      userId = userDetails.sub; // for non BCGov Keycloak
+    }
+    if (userId) {
+      await getUserData(
+        userId,
+        (data: any) => this.saveRSBCDataToIndexedDB("user", data),
+        (error: any) => handleError(error)
+      );
+    }
+    
+    // get user roles
+    await getUserRoles(
+      DBServiceHelper.getAuthorizationToken(),
+      (data: any) => this.saveRSBCDataToIndexedDB("userRoles", data),
+      (error: any) => handleError(error)
+    );
+  }
   
   /**
    * Inserts submission data into IndexedDB.
@@ -250,29 +293,43 @@ class OfflineSaveService {
     }
   }
 
+  /**
+   * Inserts form process data into the formProcesses table in IndexedDB.
+   * 
+   * @param data - Array of form process objects to insert
+   * @returns A promise that resolves to an object with status and message
+   * @throws Error if IndexedDB is unavailable or insertion fails.
+   */
   public static async insertDataIntoFormProcessTable(
-    data: FormProcess
+    data: FormProcess[]
   ): Promise<{ status: string; message?: string }> {
     try {
-        if (!ffDb) {
-            throw new Error("IndexedDB is not available.");
-        }
-        await ffDb.open();
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
 
-        // Get reference to the specified table
-        const table = ffDb["formProcesses"];
+      // Get reference to the specified table
+      const table = ffDb["formProcesses"];
 
-        if (!table) {
-            throw new Error(`Table formProcesses not found in IndexedDB.`);
-        }
+      if (!table) {
+        throw new Error(`Table formProcesses not found in IndexedDB.`);
+      }
 
-        // Insert the record into IndexedDB
-        await table.put(data);
+      // Validate input
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("Invalid input: data must be a non-empty array");
+      }
 
-        return { status: "success", message: `Data inserted into formProcesses successfully.` };
+      await table.bulkPut(data);
+
+      return { 
+        status: "success", 
+        message: `Successfully inserted ${data.length} form processes.` 
+      };
     } catch (error) {
-        console.error(`Error inserting data into formProcesses:`, error);
-        return { status: "failure", message: error.message };
+      console.error(`Error inserting data into formProcesses:`, error);
+      return { status: "failure", message: error.message };
     }
   }
 
