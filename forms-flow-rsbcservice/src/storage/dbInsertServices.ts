@@ -265,7 +265,8 @@ class OfflineSaveService {
         draft = DBServiceHelper.constructUpdateOfflineSubmissionData(
           draft,
           data,
-          serverDraftId
+          serverDraftId,
+          serverApplicationId
         );
       }
       const formData = await OfflineFetchService.fetchOfflineFormById(formId);
@@ -297,7 +298,8 @@ class OfflineSaveService {
    */
   public static async insertOfflineDraftData(
     draft: any,
-    serverDraftId: number | null = null
+    serverDraftId: number | null = null,
+    serverApplicationId: number | null = null
   ): Promise<Record<string, any>> {
     try {
       const formId = draft?.formId;
@@ -316,7 +318,8 @@ class OfflineSaveService {
         draft,
         formId,
         formData,
-        now
+        now,
+        serverApplicationId
       );
       let draftResponse: Record<string, any>;
       await ffDb.offlineSubmissions.put(offlineDraft);
@@ -328,15 +331,15 @@ class OfflineSaveService {
       await this.saveFFDataToIndexedDB("activeForm", activeFormData);
       const transformedDrafts =
         DBServiceHelper.transformEditDraftData(offlineDraft);
-      if (!serverDraftId) {
-        draftResponse = DBServiceHelper.constructDraftResponse(
-          offlineDraft?.draftData?.localApplicationId,
-          offlineDraft?.localDraftId,
-          now,
-          draft?.data,
-          offlineDraft?._id
-        );
-      }
+      // if (!serverDraftId) {
+      draftResponse = DBServiceHelper.constructDraftResponse(
+        offlineDraft?.draftData?.localApplicationId,
+        offlineDraft?.localDraftId,
+        now,
+        draft?.data,
+        offlineDraft?._id
+      );
+      // }
       return {
         res: draftResponse,
         draftDetails: transformedDrafts,

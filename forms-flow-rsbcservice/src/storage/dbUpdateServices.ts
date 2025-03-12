@@ -43,7 +43,7 @@ class OfflineEditService {
     draftId: string,
     formId: string,
     serverDraftId: string,
-    newSubmissionData?: {
+    newSubmissionData: {
       access: any[];
       owner: string;
       externalIds: any[];
@@ -54,7 +54,8 @@ class OfflineEditService {
       modified: string;
       data: Record<string, any>;
       _id: string;
-    }
+    },
+    serverApplicationId: number
   ): Promise<{ status: string; message?: string }> {
     try {
       let draft = await OfflineFetchService.fetchOfflineSubmissionByInputId(
@@ -65,7 +66,8 @@ class OfflineEditService {
       draft = DBServiceHelper.constructUpdateOfflineSubmissionData(
         draft,
         newSubmissionData,
-        serverDraftId
+        serverDraftId,
+        serverApplicationId
       );
 
       // Save the updated draft back to IndexedDB

@@ -34,15 +34,13 @@ interface FormDefinisionList {
   formType: string;
   processKey: string;
   modified: string;
-
 }
 
 interface FormListMetaData {
   key: string;
   totalCount: number;
   pageNo: number;
-  limit: number; 
-
+  limit: number;
 }
 
 export interface Application {
@@ -66,7 +64,6 @@ export interface Application {
   submissionId: string;
 }
 
-
 export interface ApplicationMetaData {
   owner: string;
   access: any[];
@@ -78,7 +75,6 @@ export interface ApplicationMetaData {
   modified: string;
   data: Record<string, any>;
   _id: string;
-
 }
 
 export interface Draft {
@@ -104,7 +100,6 @@ interface DraftData {
   CreatedBy?: string;
   DraftName?: string;
   localApplicationId?: number;
-  serverApplicationId?: number;
   formType?: string;
   processKey?: string;
   processName?: string;
@@ -121,13 +116,14 @@ export interface SubmissionData {
 }
 
 // brought localDraftId and localSubmissionId here because,
-// Dexie does not allow indexes on nested properties like submissionData.localSubmissionId 
+// Dexie does not allow indexes on nested properties like submissionData.localSubmissionId
 export interface OfflineSubmission {
   _id: string;
   formId: string;
   data: Record<string, any>;
   localDraftId?: number;
   serverDraftId?: number;
+  serverApplicationId?: number;
   draftData?: DraftData;
   submissionData?: SubmissionData;
   localSubmissionId?: string;
@@ -159,17 +155,17 @@ export interface FormProcess {
   formName: string;
   formType: string;
   id: string;
-  isBundle:boolean;
+  isBundle: boolean;
   isMigrated: boolean;
   majorVersion: number;
-  minorVersion:number;
+  minorVersion: number;
   modified: string;
   modifiedBy?: string;
-  parentFormId:string;
+  parentFormId: string;
   processKey: string;
   processName: string;
   processTenant?: string;
-  promptNewVersion:boolean;
+  promptNewVersion: boolean;
   status: string;
   taskVariables: TaskVariable[];
   version: string;
@@ -194,14 +190,16 @@ class FormsFlowDB extends Dexie {
     //requires a migration you need to add a .upgrade(() => {}) to the end of the version to handle how the data is migrated.
 
     this.version(1).stores({
-      formDefinitionList: "id, formId, formName, formType, processKey, modified",
+      formDefinitionList:
+        "id, formId, formName, formType, processKey, modified",
       applications: "id, modified, formId, submissionId",
       drafts: "id, applicationId, formId",
-      offlineSubmissions: "_id, formId, localSubmissionId, localDraftId, type, modified, serverDraftId",
-      formDefinitions: "_id, title, name, path, type, created, modified, machineName, parentFormId",
+      offlineSubmissions:
+        "_id, formId, localSubmissionId, localDraftId, type, modified, serverDraftId",
+      formDefinitions:
+        "_id, title, name, path, type, created, modified, machineName, parentFormId",
       activeForm: "localDraftId, serverDraftId",
-      formProcesses: "formId, formName"
-
+      formProcesses: "formId, formName",
     });
   }
 }

@@ -71,7 +71,6 @@ class DBServiceHelper {
     serverApplicationId: number
   ): OfflineSubmission {
     const submissionData = this.constructSubmissionDataObject(submission);
-    const draftData = { serverApplicationId };
     const _id = this.generateGUID();
     const submissionId = this.generateGUID();
     const now = new Date().toISOString();
@@ -85,7 +84,7 @@ class DBServiceHelper {
       localSubmissionId: submissionId,
       serverDraftId: _serverDraftId,
       submissionData,
-      draftData,
+      serverApplicationId,
       created: now,
       modified: now,
       data: submission?.data,
@@ -284,7 +283,8 @@ class DBServiceHelper {
     draft: any,
     formId: string,
     formData: any,
-    now: string
+    now: string,
+    serverApplicationId: number
   ): OfflineSubmission {
     const userDetails = this.getUserDetails();
     const _id = this.generateGUID();
@@ -295,7 +295,7 @@ class DBServiceHelper {
     const serverDraftId = draft?.serverDraftId
       ? Number(draft.serverDraftId)
       : null;
-    const serverApplicationId = null;
+    const _serverApplicationId = serverApplicationId;
     const formType = formData?.form?.type || "";
     const processKey = "";
     const processName = "";
@@ -303,7 +303,6 @@ class DBServiceHelper {
       CreatedBy: CreatedBy,
       DraftName: DraftName,
       localApplicationId: localApplicationId,
-      serverApplicationId: serverApplicationId,
       formType: formType,
       processKey: processKey,
       processName: processName,
@@ -312,6 +311,7 @@ class DBServiceHelper {
       _id,
       localDraftId: localDraftId,
       serverDraftId: serverDraftId,
+      serverApplicationId: _serverApplicationId,
       submissionData: {},
       draftData: draftData,
       created: now,
@@ -376,7 +376,8 @@ class DBServiceHelper {
   public static constructUpdateOfflineSubmissionData(
     draft: any,
     newSubmissionData: any,
-    serverDraftId: string
+    serverDraftId: string,
+    serverApplicationId: number
   ): any {
     draft.data = newSubmissionData.data;
     draft.localSubmissionId = this.generateGUID();
@@ -390,7 +391,7 @@ class DBServiceHelper {
     }
     draft.serverDraftId = _serverDraftId;
     draft.localDraftId = draft.localDraftId || this.generateRandomNumber();
-
+    draft.serverApplicationId = serverApplicationId;
     draft.submissionData = {
       access: newSubmissionData.access || [],
       externalIds: newSubmissionData.externalIds || [],
