@@ -29,8 +29,6 @@ class OfflineSubmissions {
 
       // Wait for both processes to finish
       await Promise.all([processDraftsPromise, processSubmissionPromise]);
-
-      // todo: localSubmisionid and submisssionid
     } catch (error) {
       console.error("Error processing drafts or submissions:", error);
     }
@@ -244,7 +242,6 @@ class OfflineSubmissions {
     } catch (error) {
       console.error("Error creating and updating the submission:", error);
     }
-    // todo nd test: delete the draft entry form the server db, need to update the sttaus from 1 to 0??
   }
 
   /**
@@ -277,7 +274,7 @@ class OfflineSubmissions {
   ): Promise<void> {
     await OfflineDeleteService.deleteOfflineSubmission(submission._id);
     await OfflineDeleteService.deleteApplicationWithLocalSubmissionId(
-      submission._id
+      submission.localSubmissionId
     );
   }
 
