@@ -2,13 +2,13 @@ import { RequestService } from "@formsflow/service";
 import { API_URL, WEB_BASE_URL } from "../endpoints/config";
 import {
   OfflineDeleteService,
-  OfflineFetchService
+  OfflineFetchService,
 } from "../formsflow-rsbcservices";
 import { OfflineSubmission } from "../storage/ffDb";
 import {
   FormData,
   FormioCreateResponse,
-  RequestCreateFormat
+  RequestCreateFormat,
 } from "./offlineSubmissions.interface";
 
 class OfflineSubmissions {
@@ -48,7 +48,7 @@ class OfflineSubmissions {
       if (
         draft.localDraftId &&
         draft.serverDraftId &&
-        draft.draftData.serverApplicationId
+        draft.serverApplicationId
       ) {
         // When localDraftId is present if both serverDraftId, serverApplicationId
         // then draft submission need to updated.
@@ -58,7 +58,7 @@ class OfflineSubmissions {
       if (
         draft.localDraftId &&
         !draft.serverDraftId &&
-        !draft.draftData.serverApplicationId
+        !draft.serverApplicationId
       ) {
         // When localDraftId is present without serverDraftId, serverApplicationId
         //then a new draft submission is created.
@@ -79,7 +79,7 @@ class OfflineSubmissions {
     const url = `${WEB_BASE_URL}/draft`;
     const payload = {
       data: draft.data,
-      formId: draft.formId
+      formId: draft.formId,
     };
     RequestService.httpPOSTRequest(url, payload).then(
       async () => await this.deleteLocalSubmissions(draft)
@@ -97,7 +97,7 @@ class OfflineSubmissions {
     const url = `${WEB_BASE_URL}/draft/${draft.serverDraftId}`;
     const payload = {
       data: draft.data,
-      formId: draft.formId
+      formId: draft.formId,
     };
     RequestService.httpPUTRequest(url, payload).then(
       async () => await this.deleteLocalSubmissions(draft)
@@ -115,11 +115,7 @@ class OfflineSubmissions {
       (submission) => submission.type === "application"
     );
     submittedData.forEach(async (data) => {
-      if (
-        data.localDraftId &&
-        data.serverDraftId &&
-        data.draftData.serverApplicationId
-      ) {
+      if (data.localDraftId && data.serverDraftId && data.serverApplicationId) {
         // When localDraftId is present if both serverDraftId, serverApplicationId
         // then the data need to updated.
         console.log(data);
@@ -128,7 +124,7 @@ class OfflineSubmissions {
       if (
         data.localDraftId &&
         !data.serverDraftId &&
-        !data.draftData.serverApplicationId
+        !data.serverApplicationId
       ) {
         // When localDraftId is present without serverDraftId, serverApplicationId
         //then a the data need to be created as a new submission.
@@ -171,7 +167,7 @@ class OfflineSubmissions {
         data: data.data,
         metadata: data.submissionData?.metadata,
         state: data.submissionData?.state,
-        _vnote: data.submissionData?._vnote
+        _vnote: data.submissionData?._vnote,
       };
       const header = { "x-jwt-token": localStorage.getItem("formioToken") };
       console.log(formioUrl, formioPayload);
@@ -311,7 +307,7 @@ class OfflineSubmissions {
       submissionId: submissionId,
       formUrl: this.getFormUrlWithFormIdSubmissionId(form._id, submissionId),
       webFormUrl: `${origin}form/${form._id}/submission/${submissionId}`,
-      data: submissionData
+      data: submissionData,
     };
     return requestFormat;
   }
