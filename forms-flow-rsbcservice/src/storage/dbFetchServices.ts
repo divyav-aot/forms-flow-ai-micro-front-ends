@@ -465,13 +465,24 @@ class OfflineFetchService {
    * @throws Error if IndexedDB is unavailable or the table is missing.
    */
   public static async fetchOfflineSubmissionByInputId(
-    inputDraftId: string,
-    inputDraftColumn: string
+    inputId: string,
+    inputColumn: string
   ): Promise<any> {
+    if (!ffDb) {
+      throw new Error("IndexedDB is not available.");
+    }
+    await ffDb.open();
+
+    const offlineSubmissions = ffDb["offlineSubmissions"];
+
+    if (!offlineSubmissions) {
+      throw new Error("Table offlineSubmissions not found in IndexedDB.");
+    }
     let draftId: number;
+    let draft: OfflineSubmission | undefined;
     try {
-      if (["localDraftId", "serverDraftId"].includes(inputDraftColumn)) {
-        draftId = Number(inputDraftId);
+      if (["localDraftId", "serverDraftId"].includes(inputColumn)) {
+        draftId = Number(inputId);
 
         if (isNaN(draftId)) {
           console.error("Invalid draftId: Not a valid number");
@@ -480,33 +491,27 @@ class OfflineFetchService {
             message: `Invalid draftId: Not a valid number`,
           };
         }
+        // Find the draft by localDraftId/serverDraftId
+        draft = await offlineSubmissions
+          .where(inputColumn)
+          .equals(draftId)
+          .first();
+      } else {
+        // Find the draft by localSubmissionId
+        draft = await offlineSubmissions
+          .where(inputColumn)
+          .equals(inputId)
+          .first();
       }
-
-      if (!ffDb) {
-        throw new Error("IndexedDB is not available.");
-      }
-      await ffDb.open();
-
-      const offlineSubmissions = ffDb["offlineSubmissions"];
-
-      if (!offlineSubmissions) {
-        throw new Error("Table offlineSubmissions not found in IndexedDB.");
-      }
-
-      // Find the draft by localDraftId
-      let draft: OfflineSubmission | undefined = await offlineSubmissions
-        .where(inputDraftColumn)
-        .equals(draftId)
-        .first();
 
       if (!draft) {
-        console.log(`No record found with ${inputDraftColumn}: ${draftId}`);
+        console.log(`No record found with ${inputColumn}: ${inputId}`);
         return null;
       }
       return draft;
     } catch (error) {
       console.error(
-        `Error fetching data from offlineSubmission with ${inputDraftColumn}: ${draftId}:`,
+        `Error fetching data from offlineSubmission with ${inputColumn}: ${inputId}:`,
         error
       );
       throw error;
