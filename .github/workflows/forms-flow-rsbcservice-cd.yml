@@ -3,9 +3,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      # - rsbc/7.0.0
-      # - feature/remove-s3-dependency
-      - '**'      
+      - '**'
+    #   - rsbc/7.0.0
     # paths:
     #   - "forms-flow-rsbcservice/**"
     #   - "VERSION"
@@ -20,7 +19,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - image: formsflow/forms-flow-rsbcservice
+          - image: jiminaot/forms-flow-microfrontend
             context: forms-flow-rsbcservice
             dockerfile: Dockerfile
             name: forms-flow-rsbcservice
