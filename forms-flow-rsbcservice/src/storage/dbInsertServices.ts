@@ -301,6 +301,27 @@ class OfflineSaveService {
     }
   }
 
+  public static async saveOfflineFormDefinitions(
+    forms: IndividualFormDefinition[]
+  ): Promise<void> {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+
+      if (!Array.isArray(forms) || forms.length === 0) {
+        console.warn("No valid forms provided.");
+        return;
+      }
+
+      await ffDb.formDefinitions.bulkPut(forms);
+
+      console.log(`${forms.length} forms added or updated in IndexedDB.`);
+    } catch (error) {
+      console.error("Error saving forms to IndexedDB:", error);
+    }
+  }
+
   /**
    * Saves FormFlow data to IndexedDB.
    * @param {string} resourceName - The name of the resource.
