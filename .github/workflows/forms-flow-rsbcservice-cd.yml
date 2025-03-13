@@ -6,9 +6,9 @@ on:
       # - rsbc/7.0.0
       # - feature/remove-s3-dependency
       - '**'      
-    paths:
-      - "forms-flow-rsbcservice/**"
-      - "VERSION"
+    # paths:
+    #   - "forms-flow-rsbcservice/**"
+    #   - "VERSION"
 defaults:
   run:
     shell: bash
