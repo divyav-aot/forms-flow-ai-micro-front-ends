@@ -4,7 +4,6 @@ import {
   IndividualFormDefinition,
   ActiveForm,
   FormProcess,
-  OfflineSubmission,
 } from "./ffDb";
 import { fetchStaticData } from "../request/staticDataApi";
 import { handleError } from "../helpers/helperServices";
@@ -540,6 +539,38 @@ class OfflineSaveService {
       };
     } catch (error) {
       console.error(`Error inserting data into activeForm:`, error);
+      return { status: "failure", message: error.message };
+    }
+  }
+
+  // This will insert offline deleted serverDraftId into deletedDrafts table
+  public static async saveOfflineDeletedDraft(
+    serverDraftId: number | null
+  ): Promise<{ status: string; message?: string }> {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
+
+      // Get reference to the specified table
+      const table = ffDb["deletedDrafts"];
+
+      if (!table) {
+        throw new Error(`Table deletedDrafts not found in IndexedDB.`);
+      }
+      const data = {
+        serverDraftId,
+      };
+      // Insert the record into IndexedDB
+      await table.put(data);
+
+      return {
+        status: "success",
+        message: `Data inserted into deletedDrafts successfully.`,
+      };
+    } catch (error) {
+      console.error(`Error inserting data into deletedDrafts:`, error);
       return { status: "failure", message: error.message };
     }
   }
