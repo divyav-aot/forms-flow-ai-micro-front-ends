@@ -39,12 +39,9 @@ jobs:
         with:
           install: true
 
-      - name: Debug Working Directory
-        run: pwd && ls -lah
-
       - name: Set version
         run: |
-          VER=$(cat VERSION)
+          VER=$(cat $GITHUB_WORKSPACE/VERSION)
           echo "VERSION=$VER" >> $GITHUB_ENV
 
       - run: echo "Building version ${{ env.VERSION }}"
