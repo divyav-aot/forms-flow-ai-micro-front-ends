@@ -3,8 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - rsbc/7.0.0
-      - feature/remove-s3-dependency
+      # - rsbc/7.0.0
+      # - feature/remove-s3-dependency
+      - '**'      
     paths:
       - "forms-flow-rsbcservice/**"
       - "VERSION"
