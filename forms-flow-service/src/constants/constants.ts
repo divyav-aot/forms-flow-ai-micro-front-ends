@@ -9,3 +9,7 @@ const MULTITENANCY_ENABLED_VARIABLE = (window as any)._env_?.REACT_APP_MULTI_TEN
 export const MULTITENANCY_ENABLED =
   MULTITENANCY_ENABLED_VARIABLE === "true" ||
     MULTITENANCY_ENABLED_VARIABLE === true
+
+//application details
+export const APPLICATION_NAME =
+        (window._env_ && window._env_.REACT_APP_APPLICATION_NAME) || "roadsafety";

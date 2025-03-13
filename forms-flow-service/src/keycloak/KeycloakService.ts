@@ -5,6 +5,9 @@ import Keycloak, {
   } from "keycloak-js";
 import StorageService from "../storage/storageService";
 import { encrypt, decrypt } from "./secureStorage";
+import {
+  APPLICATION_NAME,
+} from "../constants/constants";
 
   class KeycloakService {
     /**
@@ -81,10 +84,10 @@ import { encrypt, decrypt } from "./secureStorage";
               clearInterval(this.timerId);
               this.token = this.kc.token;
               StorageService.save(StorageService.User.AUTH_TOKEN, this.token!);
-              if (this.kc.refreshToken) {
+              if (this.kc.refreshToken && APPLICATION_NAME === "roadsafety") {
                 StorageService.save(StorageService.User.REFRESH_TOKEN, encrypt(this.kc.refreshToken));
               } else {
-                console.warn("Refresh token is missing when refreshing. Not storing.");
+                console.info("Refreshing Tokens - Not storing the refresh token.");
               }
               this.refreshToken();
             } else {
@@ -96,7 +99,7 @@ import { encrypt, decrypt } from "./secureStorage";
             clearInterval(this.timerId);
             this.handleTokenRefreshFailure();
           });
-      }, !skipTimer? this.getTokenExpireTime(): 0);
+      }, (!skipTimer && APPLICATION_NAME === "roadsafety") ? this.getTokenExpireTime() : 0);
     }
 
     /**
@@ -124,9 +127,11 @@ import { encrypt, decrypt } from "./secureStorage";
     */
     private readonly retryTokenRefresh = (): void => {
       console.log("Back online: Retrying token refresh.");
-      const storedEncryptedRefreshToken = StorageService.get(StorageService.User.REFRESH_TOKEN);
-      if (storedEncryptedRefreshToken) {
-        this.kc.refreshToken = decrypt(storedEncryptedRefreshToken);;
+      if (APPLICATION_NAME === "roadsafety") {
+        const storedEncryptedRefreshToken = StorageService.get(StorageService.User.REFRESH_TOKEN);
+        if (storedEncryptedRefreshToken) {
+          this.kc.refreshToken = decrypt(storedEncryptedRefreshToken);
+        }
       }
       this.isWaitingForOnline = false;
       this.refreshToken(true);
@@ -173,11 +178,11 @@ import { encrypt, decrypt } from "./secureStorage";
               this.token = this.kc.token;
               this._tokenParsed = this.kc.tokenParsed;
 
-              if (this.kc.refreshToken) {
+              if (this.kc.refreshToken && APPLICATION_NAME === "roadsafety") {
                 StorageService.save(StorageService.User.REFRESH_TOKEN, encrypt(this.kc.refreshToken));
                 window.addEventListener("online", this.retryTokenRefresh, { once: false });
               } else {
-                console.warn("Refresh token is missing when initializing. Not storing.");
+                console.info("Init KC - not storing the refresh token.");
               }
 
               StorageService.save(StorageService.User.AUTH_TOKEN, this.token!);
