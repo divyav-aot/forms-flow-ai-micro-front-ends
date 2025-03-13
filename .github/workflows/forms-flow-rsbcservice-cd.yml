@@ -3,11 +3,10 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - '**'
-    #   - rsbc/7.0.0
-    # paths:
-    #   - "forms-flow-rsbcservice/**"
-    #   - "VERSION"
+      - rsbc/7.0.0
+    paths:
+      - "forms-flow-rsbcservice/**"
+      - "VERSION"
 defaults:
   run:
     shell: bash
@@ -19,7 +18,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - image: jiminaot/forms-flow-microfrontend
+          - image: formsflow/forms-flow-microfrontend
             context: forms-flow-rsbcservice
             dockerfile: Dockerfile
             name: forms-flow-rsbcservice
