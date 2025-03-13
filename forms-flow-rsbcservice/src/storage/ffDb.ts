@@ -23,6 +23,7 @@ interface FormAccess {
 export interface IndividualFormDefinition {
   _id: string;
   title: string;
+  description: string;
   name: string;
   path: string;
   type: string;
@@ -174,7 +175,7 @@ class FormsFlowDB extends Dexie {
       offlineSubmissions:
         "_id, formId, localSubmissionId, localDraftId, type, modified, serverDraftId",
       formDefinitions:
-        "_id, title, name, path, type, created, modified, machineName, parentFormId",
+        "_id, title, description, name, path, type, created, modified, machineName, parentFormId",
       activeForm: "localDraftId, serverDraftId",
       formProcesses: "formId, formName",
       deletedDrafts: "serverDraftId",
