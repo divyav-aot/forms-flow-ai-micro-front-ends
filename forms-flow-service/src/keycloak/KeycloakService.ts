@@ -65,7 +65,7 @@ import Keycloak, {
     /**
      * Refresh the keycloak token before expiring
      */
-    private refreshToken(): void {
+    private refreshToken(skipTimer: boolean = false): void {
       this.timerId = setInterval(() => {
         if (!navigator.onLine) {
           console.debug("Offline: Skipping token refresh.");
@@ -80,6 +80,7 @@ import Keycloak, {
               clearInterval(this.timerId);
               this.token = this.kc.token;
               StorageService.save(StorageService.User.AUTH_TOKEN, this.token!);
+              StorageService.save(StorageService.User.REFRESH_TOKEN, this.kc.refreshToken!);
               this.refreshToken();
             } else {
               console.log("Token is still valid!");
@@ -90,7 +91,7 @@ import Keycloak, {
             clearInterval(this.timerId);
             this.handleTokenRefreshFailure();
           });
-      }, this.getTokenExpireTime());
+      }, !skipTimer? this.getTokenExpireTime(): 0);
     }
 
     /**
@@ -118,8 +119,12 @@ import Keycloak, {
     */
     private readonly retryTokenRefresh = (): void => {
       console.log("Back online: Retrying token refresh.");
+      const storedRefreshToken = StorageService.get(StorageService.User.REFRESH_TOKEN);
+      if (storedRefreshToken) {
+        this.kc.refreshToken = storedRefreshToken;
+      }
       this.isWaitingForOnline = false;
-      this.refreshToken();
+      this.refreshToken(true);
     };
 
   
@@ -162,6 +167,13 @@ import Keycloak, {
               StorageService.save(StorageService.User.USER_ROLE, JSON.stringify(UserRoles));
               this.token = this.kc.token;
               this._tokenParsed = this.kc.tokenParsed;
+
+              const refreshToken = this.kc.refreshToken;
+              if (refreshToken) {
+                StorageService.save(StorageService.User.REFRESH_TOKEN, refreshToken);
+                window.addEventListener("online", this.retryTokenRefresh, { once: false });
+              }
+
               StorageService.save(StorageService.User.AUTH_TOKEN, this.token!);
               this.kc.loadUserInfo().then((data) => {
                 this.userData = data;
