@@ -24,20 +24,7 @@ class DBServiceHelper {
   private static generateRandomNumber(): number {
     return crypto.getRandomValues(new Uint32Array(1))[0];
   }
-  /**
-   * Retrieves user details from storage.
-   * @returns {any} - Parsed user details.
-   */
-  public static getUserDetails(): any {
-    return JSON.parse(StorageService.get(StorageService.User.USER_DETAILS));
-  }
-  /**
-   * Retrieves authorization token from storage.
-   * @returns string - authorization token.
-   */
-  public static getAuthorizationToken(): any {
-    return StorageService.get(StorageService.User.AUTH_TOKEN);
-  }
+
   /**
    * Constructs a submission data object.
    * @param {any} submission - The submission data.
@@ -56,6 +43,60 @@ class DBServiceHelper {
       state: "submitted",
       _vnote: "",
     };
+  }
+
+  /**
+   * Transforms submission data.
+   * @param {any} submission - The submission data.
+   * @returns {ApplicationMetaData | null} - Transformed submission data or null on error.
+   */
+  private static transformSubmissionData(
+    submission: any
+  ): ApplicationMetaData | null {
+    try {
+      if (!submission || typeof submission !== "object") {
+        throw new Error("Invalid submission object");
+      }
+      const submissionData = submission.submissionData || {};
+      return {
+        access: Array.isArray(submissionData.access)
+          ? submissionData.access
+          : [],
+        owner: submissionData.owner || "",
+        externalIds: Array.isArray(submissionData.externalIds)
+          ? submissionData.externalIds
+          : [],
+        roles: Array.isArray(submissionData.roles) ? submissionData.roles : [],
+        metadata:
+          typeof submissionData.metadata === "object" &&
+          submissionData.metadata !== null
+            ? submissionData.metadata
+            : {},
+        form: submission.formId || "",
+        created: submission.created || "",
+        modified: submission.modified || "",
+        data: submission.data || {},
+        _id: submission.localSubmissionId || "",
+      };
+    } catch (error) {
+      console.error("Error in transformSubmissionData:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Retrieves user details from storage.
+   * @returns {any} - Parsed user details.
+   */
+  public static getUserDetails(): any {
+    return JSON.parse(StorageService.get(StorageService.User.USER_DETAILS));
+  }
+  /**
+   * Retrieves authorization token from storage.
+   * @returns string - authorization token.
+   */
+  public static getAuthorizationToken(): any {
+    return StorageService.get(StorageService.User.AUTH_TOKEN);
   }
 
   /**
@@ -130,45 +171,6 @@ class DBServiceHelper {
       processTenant: null,
       submissionId,
     };
-  }
-
-  /**
-   * Transforms submission data.
-   * @param {any} submission - The submission data.
-   * @returns {object | null} - Transformed submission data or null on error.
-   */
-  private static transformSubmissionData(
-    submission: any
-  ): ApplicationMetaData | null {
-    try {
-      if (!submission || typeof submission !== "object") {
-        throw new Error("Invalid submission object");
-      }
-      const submissionData = submission.submissionData || {};
-      return {
-        access: Array.isArray(submissionData.access)
-          ? submissionData.access
-          : [],
-        owner: submissionData.owner || "",
-        externalIds: Array.isArray(submissionData.externalIds)
-          ? submissionData.externalIds
-          : [],
-        roles: Array.isArray(submissionData.roles) ? submissionData.roles : [],
-        metadata:
-          typeof submissionData.metadata === "object" &&
-          submissionData.metadata !== null
-            ? submissionData.metadata
-            : {},
-        form: submission.formId || "",
-        created: submission.created || "",
-        modified: submission.modified || "",
-        data: submission.data || {},
-        _id: submission.localSubmissionId || "",
-      };
-    } catch (error) {
-      console.error("Error in transformSubmissionData:", error);
-      return null;
-    }
   }
 
   /**
@@ -275,7 +277,7 @@ class DBServiceHelper {
   }
 
   /**
-   * Constructs offline draft data.
+   * Constructs offline draft data. This is used to get the draft by Id.
    * @param {any} draft - The draft data.
    * @returns {object} - The constructed offline submission data.
    */
@@ -323,6 +325,7 @@ class DBServiceHelper {
     return inputDraft;
   }
 
+  // construct the draft response. This is similar to the Draft POST reponse.
   public static constructDraftResponse(
     localApplicationId: number,
     localDraftId: number,
@@ -349,6 +352,7 @@ class DBServiceHelper {
     };
   }
 
+  // transforming the draft to show the drafts dashboard.
   public static tranformOfflineDrafts(drafts: OfflineSubmission[]): {
     totalCount: number;
     drafts: Draft[];
@@ -373,6 +377,7 @@ class DBServiceHelper {
     };
   }
 
+  // constructing the submission object to update the offlineSubmission table.
   public static constructUpdateOfflineSubmissionData(
     draft: any,
     newSubmissionData: any,
@@ -401,6 +406,7 @@ class DBServiceHelper {
     return draft;
   }
 
+  // transforming the OfflineSubmission data to show in the Edit draft page. This is to get the draft by Id.
   public static transformEditDraftData(draft: OfflineSubmission): any {
     return {
       CreatedBy: draft.draftData.CreatedBy,

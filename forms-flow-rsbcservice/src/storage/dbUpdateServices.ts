@@ -1,4 +1,5 @@
 import { ffDb, OfflineSubmission } from "./ffDb";
+import { rsbcDb } from "./rsbcDb";
 import DBServiceHelper from "../helpers/helperDbServices";
 import OfflineFetchService from "./dbFetchServices";
 import OfflineSaveService from "./dbInsertServices";
@@ -97,61 +98,6 @@ class OfflineEditService {
         error
       );
       return { status: "error", message: error.message };
-    }
-  }
-
-  public static async updateActiveFormTable(
-    updateColumn: string,
-    updateValue: string,
-    whereColumn: string,
-    whereValue: string
-  ): Promise<{ status: string; message?: string }> {
-    try {
-      const localUpdateValue = Number(updateValue);
-      const localWhereValue = Number(whereValue);
-
-      if (isNaN(localUpdateValue) || isNaN(localWhereValue)) {
-        console.error("Invalid updateValue/whereValue: Not a valid number");
-        return null;
-      }
-      if (!ffDb) {
-        throw new Error("IndexedDB is not available.");
-      }
-      await ffDb.open();
-
-      // Get reference to the specified table
-      const table = ffDb["activeForm"];
-
-      if (!table) {
-        throw new Error(`Table activeForm not found in IndexedDB.`);
-      }
-
-      // Find the record matching the whereColumn condition
-      const record = await table
-        .where(whereColumn)
-        .equals(localWhereValue)
-        .first();
-
-      if (!record) {
-        return {
-          status: "failure",
-          message: `No record found with ${whereColumn}: ${whereValue}`,
-        };
-      }
-
-      // Update the column value
-      record[updateColumn] = localUpdateValue;
-
-      // Save the updated record back to IndexedDB
-      await table.put(record);
-
-      return {
-        status: "success",
-        message: `Updated ${updateColumn} in activeForm successfully.`,
-      };
-    } catch (error) {
-      console.error(`Error updating ${updateColumn} in activeForm:`, error);
-      return { status: "failure", message: error.message };
     }
   }
 }

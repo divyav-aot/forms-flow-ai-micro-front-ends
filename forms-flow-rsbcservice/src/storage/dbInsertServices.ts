@@ -121,6 +121,25 @@ class OfflineSaveService {
   }
 
   /**
+   * private function to save formID data to IndexedDB.
+   * @param data - list of formID data to be saved.
+   * @private
+   */
+  private static async _saveFormIdDataToIndexedDB(data: any): Promise<void> {
+    try {
+      if (!rsbcDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      if (!data || data.length === 0) {
+        throw new Error(`No valid data provided for formID.`);
+      }
+      await rsbcDb.formID.bulkPut(data);
+    } catch (error) {
+      console.error(`Error saving formID to IndexedDB:`, error);
+    }
+  }
+
+  /**
    * Fetches static data from API and saves it to IndexedDB.
    */
   public static async fetchAndSaveStaticData(): Promise<void> {
@@ -150,22 +169,136 @@ class OfflineSaveService {
     }
   }
 
-  public static async saveOfflineFormDefinition(
-    form: IndividualFormDefinition
+  /**
+   * Fetches user data and roles from API and saves it to IndexedDB.
+   */
+  public static async fetchAndSaveUserDataAndRoles(): Promise<void> {
+    // get user data
+    const userDetails = DBServiceHelper.getUserDetails();
+
+    let userId = null;
+    if (userDetails?.identity_provider === "idir") {
+      userId = userDetails.idir_user_guid;
+    } else if (userDetails?.identity_provider === "bceid") {
+      userId = userDetails.bceid_user_guid;
+    } else {
+      userId = userDetails.sub; // for non BCGov Keycloak
+    }
+    if (userId) {
+      await getUserData(
+        userId,
+        (data: any) => this.saveRSBCDataToIndexedDB("user", data),
+        (error: any) => handleError(error)
+      );
+    }
+
+    // get user roles
+    await getUserRoles(
+      DBServiceHelper.getAuthorizationToken(),
+      (data: any) => this.saveRSBCDataToIndexedDB("userRoles", data),
+      (error: any) => handleError(error)
+    );
+  }
+
+  /**
+   * Calculates the how many new form IDs are required and fetches them from the server
+   * and save them to the IndexedDB with leased status as false.
+   */
+  public static async fetchAndSaveFormIDs(): Promise<any> {
+    try {
+      if (!rsbcDb.formID) {
+        throw new Error("IndexedDB formID table is not available.");
+      }
+      const existingFormIds = await rsbcDb.formID.toArray();
+      const countByFormType = existingFormIds.reduce((acc, obj) => {
+        if (!obj.leased) {
+          acc[obj.form_type] = (acc[obj.form_type] || 0) + 1;
+        }
+        return acc;
+      }, {});
+
+      const required12Hour = Math.max(
+        0,
+        REACT_APP_FORM_ID_12HOUR_LIMIT - (countByFormType["12Hour"] || 0)
+      );
+      const required24Hour = Math.max(
+        0,
+        REACT_APP_FORM_ID_24HOUR_LIMIT - (countByFormType["24Hour"] || 0)
+      );
+      const requiredVI = Math.max(
+        0,
+        REACT_APP_FORM_ID_VI_LIMIT - (countByFormType["VI"] || 0)
+      );
+      try {
+        const requiredIds = {
+          "12Hour": required12Hour,
+          "24Hour": required24Hour,
+          VI: requiredVI,
+        };
+
+        await fetchFormIDs(
+          requiredIds,
+          async (data: any) => {
+            const formIdData = data.forms.map((item: any) => ({
+              id: item.id,
+              form_type: item.form_type,
+              user_guid: item.user_guid,
+              leased: false,
+              lease_expiry: item.lease_expiry,
+              printed_timestamp: item.printed_timestamp,
+              spoiled_timestamp: item.spoiled_timestamp,
+              last_updated: new Date().toISOString(),
+            }));
+            if (formIdData && formIdData.length > 0) {
+              await this._saveFormIdDataToIndexedDB(formIdData);
+            }
+          },
+          (error: any) => {
+            console.error("Error loading formIDs from the server:", error);
+            return [];
+          }
+        );
+      } catch (error) {
+        console.error(`Error saving formIDs to indexed db:`, error);
+      }
+      if (existingFormIds.length === 0) {
+        console.log(`No data found in table form_id.`);
+      }
+      const latestIds = await rsbcDb.formID.toArray();
+      return latestIds;
+    } catch (error) {
+      console.error(`Error fetching data from table form_id:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Marks a form as leased in IndexedDB.
+   * @param formId - The form ID.
+   * @param formType - The form type.
+   */
+  public static async markFormAsLeased(
+    formId: number,
+    formType: string
   ): Promise<void> {
     try {
-      if (!ffDb) {
-        throw new Error("IndexedDB is not available.");
+      if (!rsbcDb.formID) {
+        throw new Error("FormID table is not available.");
       }
-
+      const form = await rsbcDb.formID
+        .where({ id: formId, form_type: formType })
+        .first();
       if (!form) {
-        console.warn("No valid form provided.");
-        return;
+        throw new Error(
+          `Form with ID ${formId} and type ${formType} not found.`
+        );
       }
-      await ffDb.formDefinitions.put(form);
-      console.log(`Form with ID ${form._id} added or updated in IndexedDB.`);
+      await rsbcDb.formID.update(form.id, {
+        leased: true,
+        last_updated: new Date().toISOString(),
+      });
     } catch (error) {
-      console.error("Error saving form to IndexedDB:", error);
+      console.error(`Error updating lease status in IndexedDB:`, error);
     }
   }
 
@@ -207,35 +340,63 @@ class OfflineSaveService {
     }
   }
 
+  public static async saveOfflineFormDefinition(
+    form: IndividualFormDefinition
+  ): Promise<void> {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+
+      if (!form) {
+        console.warn("No valid form provided.");
+        return;
+      }
+      await ffDb.formDefinitions.put(form);
+      console.log(`Form with ID ${form._id} added or updated in IndexedDB.`);
+    } catch (error) {
+      console.error("Error saving form to IndexedDB:", error);
+    }
+  }
+
   /**
-   * Fetches user data and roles from API and saves it to IndexedDB.
+   * Inserts form process data into the formProcesses table in IndexedDB.
+   *
+   * @param data - Array of form process objects to insert
+   * @returns A promise that resolves to an object with status and message
+   * @throws Error if IndexedDB is unavailable or insertion fails.
    */
-  public static async fetchAndSaveUserDataAndRoles(): Promise<void> {
-    // get user data
-    const userDetails = DBServiceHelper.getUserDetails();
+  public static async insertDataIntoFormProcessTable(
+    data: FormProcess[]
+  ): Promise<{ status: string; message?: string }> {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
 
-    let userId = null;
-    if (userDetails?.identity_provider === "idir") {
-      userId = userDetails.idir_user_guid;
-    } else if (userDetails?.identity_provider === "bceid") {
-      userId = userDetails.bceid_user_guid;
-    } else {
-      userId = userDetails.sub; // for non BCGov Keycloak
-    }
-    if (userId) {
-      await getUserData(
-        userId,
-        (data: any) => this.saveRSBCDataToIndexedDB("user", data),
-        (error: any) => handleError(error)
-      );
-    }
+      // Get reference to the specified table
+      const table = ffDb["formProcesses"];
 
-    // get user roles
-    await getUserRoles(
-      DBServiceHelper.getAuthorizationToken(),
-      (data: any) => this.saveRSBCDataToIndexedDB("userRoles", data),
-      (error: any) => handleError(error)
-    );
+      if (!table) {
+        throw new Error(`Table formProcesses not found in IndexedDB.`);
+      }
+
+      // Validate input
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("Invalid input: data must be a non-empty array");
+      }
+
+      await table.bulkPut(data);
+
+      return {
+        status: "success",
+        message: `Successfully inserted ${data.length} form processes.`,
+      };
+    } catch (error) {
+      console.error(`Error inserting data into formProcesses:`, error);
+      return { status: "failure", message: error.message };
+    }
   }
 
   /**
@@ -380,208 +541,6 @@ class OfflineSaveService {
     } catch (error) {
       console.error(`Error inserting data into activeForm:`, error);
       return { status: "failure", message: error.message };
-    }
-  }
-
-  public static async saveActiveFormDataByServerDraftId(
-    serverDraftId: string
-  ): Promise<{ status: string; message?: string }> {
-    try {
-      if (!ffDb) {
-        throw new Error("IndexedDB is not available.");
-      }
-      await ffDb.open();
-
-      // Get reference to the specified table
-      const table = ffDb["activeForm"];
-
-      if (!table) {
-        throw new Error(`Table activeForm not found in IndexedDB.`);
-      }
-      if (serverDraftId) {
-        const existingSubmission =
-          await OfflineFetchService.fetchOfflineSubmissionByInputId(
-            serverDraftId,
-            "serverDraftId"
-          );
-        if (existingSubmission) {
-          // Update existing record with new data and modified timestamp
-          const data = {
-            localDraftId: existingSubmission?.localDraftId,
-            serverDraftId: parseInt(serverDraftId),
-          };
-          await table.clear();
-          await table.put(data);
-        }
-      }
-      return {
-        status: "success",
-        message: `Data inserted into activeForm successfully.`,
-      };
-    } catch (error) {
-      console.error(`Error inserting data into activeForm:`, error);
-      return { status: "failure", message: error.message };
-    }
-  }
-
-  /**
-   * Inserts form process data into the formProcesses table in IndexedDB.
-   *
-   * @param data - Array of form process objects to insert
-   * @returns A promise that resolves to an object with status and message
-   * @throws Error if IndexedDB is unavailable or insertion fails.
-   */
-  public static async insertDataIntoFormProcessTable(
-    data: FormProcess[]
-  ): Promise<{ status: string; message?: string }> {
-    try {
-      if (!ffDb) {
-        throw new Error("IndexedDB is not available.");
-      }
-      await ffDb.open();
-
-      // Get reference to the specified table
-      const table = ffDb["formProcesses"];
-
-      if (!table) {
-        throw new Error(`Table formProcesses not found in IndexedDB.`);
-      }
-
-      // Validate input
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error("Invalid input: data must be a non-empty array");
-      }
-
-      await table.bulkPut(data);
-
-      return {
-        status: "success",
-        message: `Successfully inserted ${data.length} form processes.`,
-      };
-    } catch (error) {
-      console.error(`Error inserting data into formProcesses:`, error);
-      return { status: "failure", message: error.message };
-    }
-  }
-
-  /**
-   * Calculates the how many new form IDs are required and fetches them from the server
-   * and save them to the IndexedDB with leased status as false.
-   */
-  public static async fetchAndSaveFormIDs(): Promise<any> {
-    try {
-      if (!rsbcDb.formID) {
-        throw new Error("IndexedDB formID table is not available.");
-      }
-      const existingFormIds = await rsbcDb.formID.toArray();
-      const countByFormType = existingFormIds.reduce((acc, obj) => {
-        if (!obj.leased) {
-          acc[obj.form_type] = (acc[obj.form_type] || 0) + 1;
-        }
-        return acc;
-      }, {});
-
-      const required12Hour = Math.max(
-        0,
-        REACT_APP_FORM_ID_12HOUR_LIMIT - (countByFormType["12Hour"] || 0)
-      );
-      const required24Hour = Math.max(
-        0,
-        REACT_APP_FORM_ID_24HOUR_LIMIT - (countByFormType["24Hour"] || 0)
-      );
-      const requiredVI = Math.max(
-        0,
-        REACT_APP_FORM_ID_VI_LIMIT - (countByFormType["VI"] || 0)
-      );
-      try {
-        const requiredIds = {
-          "12Hour": required12Hour,
-          "24Hour": required24Hour,
-          VI: requiredVI,
-        };
-
-        await fetchFormIDs(
-          requiredIds,
-          async (data: any) => {
-            const formIdData = data.forms.map((item: any) => ({
-              id: item.id,
-              form_type: item.form_type,
-              user_guid: item.user_guid,
-              leased: false,
-              lease_expiry: item.lease_expiry,
-              printed_timestamp: item.printed_timestamp,
-              spoiled_timestamp: item.spoiled_timestamp,
-              last_updated: new Date().toISOString(),
-            }));
-            if (formIdData && formIdData.length > 0) {
-              await this._saveForIdDataToIndexedDB(formIdData);
-            }
-          },
-          (error: any) => {
-            console.error("Error loading formIDs from the server:", error);
-            return [];
-          }
-        );
-      } catch (error) {
-        console.error(`Error saving formIDs to indexed db:`, error);
-      }
-      if (existingFormIds.length === 0) {
-        console.log(`No data found in table form_id.`);
-      }
-      const latestIds = await rsbcDb.formID.toArray();
-      return latestIds;
-    } catch (error) {
-      console.error(`Error fetching data from table form_id:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Marks a form as leased in IndexedDB.
-   * @param formId - The form ID.
-   * @param formType - The form type.
-   */
-  public static async markFormAsLeased(
-    formId: number,
-    formType: string
-  ): Promise<void> {
-    try {
-      if (!rsbcDb.formID) {
-        throw new Error("FormID table is not available.");
-      }
-      const form = await rsbcDb.formID
-        .where({ id: formId, form_type: formType })
-        .first();
-      if (!form) {
-        throw new Error(
-          `Form with ID ${formId} and type ${formType} not found.`
-        );
-      }
-      await rsbcDb.formID.update(form.id, {
-        leased: true,
-        last_updated: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error(`Error updating lease status in IndexedDB:`, error);
-    }
-  }
-
-  /**
-   * private function to save formID data to IndexedDB.
-   * @param data - list of formID data to be saved.
-   * @private
-   */
-  private static async _saveForIdDataToIndexedDB(data: any): Promise<void> {
-    try {
-      if (!rsbcDb) {
-        throw new Error("IndexedDB is not available.");
-      }
-      if (!data || data.length === 0) {
-        throw new Error(`No valid data provided for formID.`);
-      }
-      await rsbcDb.formID.bulkPut(data);
-    } catch (error) {
-      console.error(`Error saving formID to IndexedDB:`, error);
     }
   }
 }

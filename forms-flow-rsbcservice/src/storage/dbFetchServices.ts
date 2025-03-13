@@ -223,6 +223,190 @@ class OfflineFetchService {
   }
 
   /**
+   * Fetches the all form Ids data from the "formID" table in IndexedDB.
+   */
+  public static async fetchFormIdDataFromTable(): Promise<any[]> {
+    const tableName = "formID";
+    try {
+      if (!rsbcDb) throw new Error("IndexedDB is not available.");
+
+      await rsbcDb.open(); // Ensure the database is open
+
+      const table = rsbcDb[tableName];
+      if (!table) throw new Error(`Table ${tableName} not found in IndexedDB.`);
+
+      const data = await table.toArray();
+      if (!data.length) console.warn(`No data found in table ${tableName}.`);
+
+      return data;
+    } catch (error) {
+      console.error(`Error fetching data from table ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Returns the unleased form IDs for a given form type.
+   * @param formType - "12Hour", "24Hour", "VI"
+   */
+  public static async getAvailableFormIds(formType: string): Promise<any[]> {
+    try {
+      if (!rsbcDb.formID) {
+        throw new Error("FormID table is not available.");
+      }
+      if (!formType || !FormTypes.includes(formType)) {
+        throw new Error(`Valid formTypes: ${FormTypes.join(", ")}`);
+      }
+      const unleasedForms = await rsbcDb.formID
+        .where("form_type")
+        .equals(formType)
+        .filter((form) => form.leased === false)
+        .toArray();
+
+      return unleasedForms.map((form) => form.id);
+    } catch (error) {
+      console.error(`Error fetching available form IDs from IndexedDB:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Fetches the form availability data from the "formID" table in IndexedDB.
+   * @param formType - "12Hour", "24Hour", "VI"
+   */
+  public static async getNextAvailableFormId(
+    formType: string
+  ): Promise<string | null> {
+    try {
+      if (!rsbcDb.formID) {
+        throw new Error("FormID table is not available.");
+      }
+
+      if (!formType || !FormTypes.includes(formType)) {
+        throw new Error(`Valid formTypes: ${FormTypes.join(", ")}`);
+      }
+
+      const topUnleasedForm = await rsbcDb.formID
+        .where("form_type")
+        .equals(formType)
+        .and((form) => form.leased === false)
+        .sortBy("last_updated")
+        .then((forms) => forms[0]);
+
+      return topUnleasedForm ? topUnleasedForm.id : null;
+    } catch (error) {
+      console.error(
+        `Error fetching next available form ID from IndexedDB:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Fetches the form unleased Ids data from the "formID" table in IndexedDB.
+   * @return [{"form_type": string, "count": number}]
+   */
+  public static async getFormAvailability(): Promise<
+    { form_type: string; count: number }[]
+  > {
+    try {
+      if (!rsbcDb.formID) {
+        throw new Error("FormID table is not available.");
+      }
+
+      const unleasedForms = await rsbcDb.formID
+        .filter((form) => form.leased === false)
+        .toArray();
+
+      const formTypeCounts: { [key: string]: number } = {};
+      unleasedForms.forEach((form) => {
+        formTypeCounts[form.form_type] =
+          (formTypeCounts[form.form_type] || 0) + 1;
+      });
+
+      const result = Object.entries(formTypeCounts).map(
+        ([form_type, count]) => ({
+          form_type,
+          count,
+        })
+      );
+
+      return result;
+    } catch (error) {
+      console.error(`Error fetching form availability from IndexedDB:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Generates metadata for fetched data.
+   *
+   * @param data - The data for which metadata is generated.
+   * @returns An object containing metadata such as count and pagination details.
+   */
+  private static getMetadata(data: any) {
+    return {
+      draftCount: 0,
+      totalCount: data?.length,
+      pageNo: 1,
+      limit: 5,
+    };
+  }
+
+  /**
+   * Retrieves all form definitions from IndexedDB.
+   */
+  private static async getOriginalFormDefinitions(): Promise<
+    IndividualFormDefinition[]
+  > {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      return await ffDb.formDefinitions.toArray();
+    } catch (error) {
+      console.error("Error retrieving form definitions from IndexedDB:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Fetches form definitions from IndexedDB and transforms them into the required format.
+   */
+  public static async fetchOfflineFormDefinitions(): Promise<{
+    forms: {
+      description: string;
+      formId: string;
+      formName: string;
+      formType: string;
+      id: string;
+      modified: string;
+      processKey: string;
+    }[];
+    limit: number;
+    pageNo: number;
+    totalCount: number;
+  }> {
+    try {
+      const forms = await this.getOriginalFormDefinitions();
+
+      // Get total count from the array length
+      const totalCount = forms.length;
+
+      // Transform and return the data
+      const finalData = DBServiceHelper.transformFormDefinitions(
+        forms,
+        totalCount
+      );
+      return finalData;
+    } catch (error) {
+      console.error("Error fetching and transforming form definitions:", error);
+      return { forms: [], limit: 5, pageNo: 1, totalCount: 0 };
+    }
+  }
+
+  /**
    * Fetches a specific offline form by its ID from the formDefinition table.
    *
    * @param formId - The ID of the form to retrieve.
@@ -262,19 +446,39 @@ class OfflineFetchService {
     }
   }
 
-  /**
-   * Generates metadata for fetched data.
-   *
-   * @param data - The data for which metadata is generated.
-   * @returns An object containing metadata such as count and pagination details.
-   */
-  private static getMetadata(data: any) {
-    return {
-      draftCount: 0,
-      totalCount: data?.length,
-      pageNo: 1,
-      limit: 5,
-    };
+  // fetched form process by formId
+  public static async fetchOfflineFormProcessById(
+    formId: string
+  ): Promise<any> {
+    try {
+      if (!ffDb) {
+        throw new Error("IndexedDB is not available.");
+      }
+      await ffDb.open();
+
+      // Get reference to the formProcesses table
+      const table = ffDb["formProcesses"];
+
+      if (!table) {
+        throw new Error("Table formProcesses not found in IndexedDB.");
+      }
+
+      // Fetch row by ID
+      const data = await table.get(formId);
+
+      if (!data) {
+        console.log(`No record found with id: ${formId}`);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error(
+        `Error fetching data from formProcesses with id ${formId}:`,
+        error
+      );
+      throw error;
+    }
   }
 
   /**
@@ -340,57 +544,6 @@ class OfflineFetchService {
       throw error;
     }
   }
-  /**
-   * Retrieves all form definitions from IndexedDB.
-   */
-  private static async getOriginalFormDefinitions(): Promise<
-    IndividualFormDefinition[]
-  > {
-    try {
-      if (!ffDb) {
-        throw new Error("IndexedDB is not available.");
-      }
-      return await ffDb.formDefinitions.toArray();
-    } catch (error) {
-      console.error("Error retrieving form definitions from IndexedDB:", error);
-      return [];
-    }
-  }
-
-  /**
-   * Fetches form definitions from IndexedDB and transforms them into the required format.
-   */
-  public static async fetchOfflineFormDefinitions(): Promise<{
-    forms: {
-      description: string;
-      formId: string;
-      formName: string;
-      formType: string;
-      id: string;
-      modified: string;
-      processKey: string;
-    }[];
-    limit: number;
-    pageNo: number;
-    totalCount: number;
-  }> {
-    try {
-      const forms = await this.getOriginalFormDefinitions();
-
-      // Get total count from the array length
-      const totalCount = forms.length;
-
-      // Transform and return the data
-      const finalData = DBServiceHelper.transformFormDefinitions(
-        forms,
-        totalCount
-      );
-      return finalData;
-    } catch (error) {
-      console.error("Error fetching and transforming form definitions:", error);
-      return { forms: [], limit: 5, pageNo: 1, totalCount: 0 };
-    }
-  }
 
   /**
    * Fetches offline drafts from the "offlineSubmission" table.
@@ -430,28 +583,6 @@ class OfflineFetchService {
         `Error fetching data from offlineSubmission with offline draft information :`,
         error
       );
-      throw error;
-    }
-  }
-  /**
-   * Fetches the all form Ids data from the "formID" table in IndexedDB.
-   */
-  public static async fetchFormIdDataFromTable(): Promise<any[]> {
-    const tableName = "formID";
-    try {
-      if (!rsbcDb) throw new Error("IndexedDB is not available.");
-
-      await rsbcDb.open(); // Ensure the database is open
-
-      const table = rsbcDb[tableName];
-      if (!table) throw new Error(`Table ${tableName} not found in IndexedDB.`);
-
-      const data = await table.toArray();
-      if (!data.length) console.warn(`No data found in table ${tableName}.`);
-
-      return data;
-    } catch (error) {
-      console.error(`Error fetching data from table ${tableName}:`, error);
       throw error;
     }
   }
@@ -544,40 +675,6 @@ class OfflineFetchService {
     }
   }
 
-  public static async fetchOfflineFormProcessById(
-    formId: string
-  ): Promise<any> {
-    try {
-      if (!ffDb) {
-        throw new Error("IndexedDB is not available.");
-      }
-      await ffDb.open();
-
-      // Get reference to the formProcesses table
-      const table = ffDb["formProcesses"];
-
-      if (!table) {
-        throw new Error("Table formProcesses not found in IndexedDB.");
-      }
-
-      // Fetch row by ID
-      const data = await table.get(formId);
-
-      if (!data) {
-        console.log(`No record found with id: ${formId}`);
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error(
-        `Error fetching data from formProcesses with id ${formId}:`,
-        error
-      );
-      throw error;
-    }
-  }
-
   /**
    * Fetch all non active offline submissions.
    * @returns all non active offline submissions.
@@ -603,130 +700,6 @@ class OfflineFetchService {
     } catch (error) {
       console.error("Error fetching data.", error);
       throw error;
-    }
-  }
-
-  public static async isDraftIdInActiveForm(draftId: string): Promise<boolean> {
-    try {
-      const localDraftId = Number(draftId);
-      if (isNaN(localDraftId)) {
-        console.error("Invalid localDraftId: Not a valid number");
-        return false;
-      }
-      if (!ffDb) {
-        throw new Error("IndexedDB is not available.");
-      }
-
-      await ffDb.open();
-      const table = ffDb["activeForm"];
-
-      if (!table) {
-        throw new Error("Table 'activeForm' not found in IndexedDB.");
-      }
-
-      // Check if the draftId exists
-      const data = await table.get(localDraftId);
-      return !!data; // Return true if data exists, false otherwise
-    } catch (error) {
-      console.error(
-        `Error checking draftId in activeForm with id ${draftId}:`,
-        error
-      );
-      return false;
-    }
-  }
-
-  /**
-   * Returns the unleased form IDs for a given form type.
-   * @param formType - "12Hour", "24Hour", "VI"
-   */
-  public static async getAvailableFormIds(formType: string): Promise<any[]> {
-    try {
-      if (!rsbcDb.formID) {
-        throw new Error("FormID table is not available.");
-      }
-      if (!formType || !FormTypes.includes(formType)) {
-        throw new Error(`Valid formTypes: ${FormTypes.join(", ")}`);
-      }
-      const unleasedForms = await rsbcDb.formID
-        .where("form_type")
-        .equals(formType)
-        .filter((form) => form.leased === false)
-        .toArray();
-
-      return unleasedForms.map((form) => form.id);
-    } catch (error) {
-      console.error(`Error fetching available form IDs from IndexedDB:`, error);
-      return [];
-    }
-  }
-
-  /**
-   * Fetches the form availability data from the "formID" table in IndexedDB.
-   * @param formType - "12Hour", "24Hour", "VI"
-   */
-  public static async getNextAvailabeFormId(
-    formType: string
-  ): Promise<string | null> {
-    try {
-      if (!rsbcDb.formID) {
-        throw new Error("FormID table is not available.");
-      }
-
-      if (!formType || !FormTypes.includes(formType)) {
-        throw new Error(`Valid formTypes: ${FormTypes.join(", ")}`);
-      }
-
-      const topUnleasedForm = await rsbcDb.formID
-        .where("form_type")
-        .equals(formType)
-        .and((form) => form.leased === false)
-        .sortBy("last_updated")
-        .then((forms) => forms[0]);
-
-      return topUnleasedForm ? topUnleasedForm.id : null;
-    } catch (error) {
-      console.error(
-        `Error fetching next available form ID from IndexedDB:`,
-        error
-      );
-      return null;
-    }
-  }
-
-  /**
-   * Fetches the form unleased Ids data from the "formID" table in IndexedDB.
-   * @return [{"form_type": string, "count": number}]
-   */
-  public static async getFormAvailability(): Promise<
-    { form_type: string; count: number }[]
-  > {
-    try {
-      if (!rsbcDb.formID) {
-        throw new Error("FormID table is not available.");
-      }
-
-      const unleasedForms = await rsbcDb.formID
-        .filter((form) => form.leased === false)
-        .toArray();
-
-      const formTypeCounts: { [key: string]: number } = {};
-      unleasedForms.forEach((form) => {
-        formTypeCounts[form.form_type] =
-          (formTypeCounts[form.form_type] || 0) + 1;
-      });
-
-      const result = Object.entries(formTypeCounts).map(
-        ([form_type, count]) => ({
-          form_type,
-          count,
-        })
-      );
-
-      return result;
-    } catch (error) {
-      console.error(`Error fetching form availability from IndexedDB:`, error);
-      return [];
     }
   }
 
