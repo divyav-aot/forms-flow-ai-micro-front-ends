@@ -115,14 +115,18 @@ class OfflineSubmissions {
       (submission) => submission.type === "application"
     );
     submittedData.forEach(async (data) => {
-      if (data.localDraftId && data.serverDraftId && data.serverApplicationId) {
+      if (
+        (data.localDraftId || data.localSubmissionId) &&
+        data.serverDraftId &&
+        data.serverApplicationId
+      ) {
         // When localDraftId is present if both serverDraftId, serverApplicationId
         // then the data need to updated.
         console.log(data);
         await this.prepareAndUpdateSubmission(data);
       }
       if (
-        data.localDraftId &&
+        (data.localDraftId || data.localSubmissionId) &&
         !data.serverDraftId &&
         !data.serverApplicationId
       ) {

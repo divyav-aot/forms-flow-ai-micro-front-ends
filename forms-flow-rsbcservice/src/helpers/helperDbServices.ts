@@ -114,6 +114,7 @@ class DBServiceHelper {
     const submissionData = this.constructSubmissionDataObject(submission);
     const _id = this.generateGUID();
     const submissionId = this.generateGUID();
+    const localDraftId = this.generateRandomNumber();
     const now = new Date().toISOString();
     let _serverDraftId = Number(serverDraftId);
 
@@ -124,6 +125,7 @@ class DBServiceHelper {
       _id,
       localSubmissionId: submissionId,
       serverDraftId: _serverDraftId,
+      localDraftId,
       submissionData,
       serverApplicationId,
       created: now,
