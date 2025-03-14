@@ -4,7 +4,7 @@ import Keycloak, {
     KeycloakConfig,
   } from "keycloak-js";
 import StorageService from "../storage/storageService";
-import { encrypt, decrypt } from "./secureStorage";
+import HelperServices from "../helpers/helperServices";
 import {
   APPLICATION_NAME,
 } from "../constants/constants";
@@ -85,7 +85,7 @@ import {
               this.token = this.kc.token;
               StorageService.save(StorageService.User.AUTH_TOKEN, this.token!);
               if (this.kc.refreshToken && APPLICATION_NAME === "roadsafety") {
-                StorageService.save(StorageService.User.REFRESH_TOKEN, encrypt(this.kc.refreshToken));
+                StorageService.save(StorageService.User.REFRESH_TOKEN, HelperServices.encrypt(this.kc.refreshToken));
               } else {
                 console.info("Refreshing Tokens - Not storing the refresh token.");
               }
@@ -132,7 +132,7 @@ import {
         skipTimer = true;
         const storedEncryptedRefreshToken = StorageService.get(StorageService.User.REFRESH_TOKEN);
         if (storedEncryptedRefreshToken) {
-          this.kc.refreshToken = decrypt(storedEncryptedRefreshToken);
+          this.kc.refreshToken = HelperServices.decrypt(storedEncryptedRefreshToken);
         }
       }
       this.isWaitingForOnline = false;
@@ -181,7 +181,7 @@ import {
               this._tokenParsed = this.kc.tokenParsed;
 
               if (this.kc.refreshToken && APPLICATION_NAME === "roadsafety") {
-                StorageService.save(StorageService.User.REFRESH_TOKEN, encrypt(this.kc.refreshToken));
+                StorageService.save(StorageService.User.REFRESH_TOKEN, HelperServices.encrypt(this.kc.refreshToken));
                 window.addEventListener("online", this.retryTokenRefresh, { once: false });
               } else {
                 console.info("Init KC - not storing the refresh token.");
