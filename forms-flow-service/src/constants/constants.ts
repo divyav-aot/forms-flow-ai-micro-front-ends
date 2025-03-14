@@ -12,4 +12,4 @@ export const MULTITENANCY_ENABLED =
 
 //application details
 export const APPLICATION_NAME =
-        (window._env_ && window._env_.REACT_APP_APPLICATION_NAME) || "roadsafety";
+        (window._env_ && window._env_.REACT_APP_APPLICATION_NAME) || "formsflow.ai";

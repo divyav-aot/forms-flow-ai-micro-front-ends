@@ -127,14 +127,16 @@ import {
     */
     private readonly retryTokenRefresh = (): void => {
       console.log("Back online: Retrying token refresh.");
+      let skipTimer: boolean = false;
       if (APPLICATION_NAME === "roadsafety") {
+        skipTimer = true;
         const storedEncryptedRefreshToken = StorageService.get(StorageService.User.REFRESH_TOKEN);
         if (storedEncryptedRefreshToken) {
           this.kc.refreshToken = decrypt(storedEncryptedRefreshToken);
         }
       }
       this.isWaitingForOnline = false;
-      this.refreshToken(true);
+      this.refreshToken(skipTimer);
     };
 
   
