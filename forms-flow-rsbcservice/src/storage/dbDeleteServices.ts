@@ -92,17 +92,14 @@ class OfflineDeleteService {
       await ffDb.open();
 
       // Get reference to the applications table
-      const offlineSubmissions = ffDb["applications"];
+      const applications = ffDb["applications"];
 
-      if (!offlineSubmissions) {
+      if (!applications) {
         throw new Error("Table applications not found in IndexedDB.");
       }
 
       // Perform the delete operation
-      await offlineSubmissions
-        .where("submissionId")
-        .equals(submissionId)
-        .delete();
+      await applications.where("submissionId").equals(submissionId).delete();
     } catch (error) {
       console.error(`Error deleting data ${submissionId}:`, error);
     }
