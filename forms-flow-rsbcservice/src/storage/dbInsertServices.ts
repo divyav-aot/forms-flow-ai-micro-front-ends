@@ -360,25 +360,6 @@ class OfflineSaveService {
     }
   }
 
-  public static async saveOfflineFormDefinition(
-    form: IndividualFormDefinition
-  ): Promise<void> {
-    try {
-      if (!ffDb) {
-        throw new Error("IndexedDB is not available.");
-      }
-
-      if (!form) {
-        console.warn("No valid form provided.");
-        return;
-      }
-      await ffDb.formDefinitions.put(form);
-      console.log(`Form with ID ${form._id} added or updated in IndexedDB.`);
-    } catch (error) {
-      console.error("Error saving form to IndexedDB:", error);
-    }
-  }
-
   /**
    * Inserts form process data into the formProcesses table in IndexedDB.
    *
