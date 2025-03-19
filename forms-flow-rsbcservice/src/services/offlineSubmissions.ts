@@ -187,7 +187,6 @@ class OfflineSubmissions {
     data: OfflineSubmission
   ): Promise<any> {
     const formioUrl = `${API_URL}/form/${data.formId}/submission`;
-    // const formioUrl = `${API_URL}/form/123/submission`;
     const formioPayload = {
       data: data.data,
       metadata: data.submissionData?.metadata,
