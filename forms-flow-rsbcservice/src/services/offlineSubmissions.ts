@@ -10,7 +10,7 @@ import {
   OfflineDeleteService,
   OfflineFetchService
 } from "../formsflow-rsbcservices";
-import { OfflineSubmission } from "../storage/ffDb";
+import { DeletedDraft, OfflineSubmission } from "../storage/ffDb";
 import {
   FormData,
   FormioCreateResponse,
@@ -47,12 +47,48 @@ class OfflineSubmissions {
       // Process drafts and submissions concurrently using Promise.all
       const processDraftsPromise = this.processDrafts(submissions);
       const processSubmissionPromise = this.processSubmission(submissions);
-
+      const deleteDraftPromise = this.processDraftDelete();
       // Wait for both processes to finish
-      await Promise.all([processDraftsPromise, processSubmissionPromise]);
+      await Promise.all([
+        processDraftsPromise,
+        processSubmissionPromise,
+        deleteDraftPromise
+      ]);
     } catch (error) {
       console.error("Error processing drafts or submissions:", error);
     }
+  }
+
+  /**
+   * Process the draft delete.
+   */
+  private static async processDraftDelete() {
+    // Fetch all drafts to be deleted from the local db
+    const draftsToBeDeleted = await OfflineFetchService.fetchAllDraftDelete();
+    const serverDraftIdToBeDeletedList = await this.getServerDraftIdList(
+      draftsToBeDeleted
+    );
+    await this.deleteDrafts(serverDraftIdToBeDeletedList);
+  }
+
+  /**
+   * Function to process delete drafts.
+   */
+  private static async deleteDrafts(serverDraftIdToBeDeletedList: number[]) {
+    for (const serverId of serverDraftIdToBeDeletedList) {
+      const URL = `${WEB_BASE_URL}/draft/${serverId}`;
+      // Calling the API
+      await RequestService.httpDELETERequest(URL);
+      // Delete the local indexdb entries.
+      await OfflineDeleteService.deleteDraftDeleteWithServerId(serverId);
+    }
+  }
+
+  /**
+   * Get server draft id list.
+   */
+  private static async getServerDraftIdList(draftsToBeDeleted: DeletedDraft[]) {
+    return draftsToBeDeleted.map((draft) => draft.serverDraftId);
   }
 
   /**
