@@ -94,13 +94,18 @@ class OfflineSubmissions {
   private static async prepareAndSubmitDraft(
     draft: OfflineSubmission
   ): Promise<void> {
-    const url = `${WEB_BASE_URL}/draft`;
-    const payload = {
-      data: draft.data,
-      formId: draft.formId
-    };
-    await RequestService.httpPOSTRequest(url, payload);
-    await this.deleteLocalSubmissions(draft);
+    try {
+      const url = `${WEB_BASE_URL}/draft`;
+      const payload = {
+        data: draft.data,
+        formId: draft.formId
+      };
+      await RequestService.httpPOSTRequest(url, payload);
+      await this.deleteLocalSubmissions(draft);
+      throw new Error("Request failed");
+    } catch (error) {
+      console.error("Error creating the submission:", error);
+    }
   }
 
   /**
@@ -110,13 +115,18 @@ class OfflineSubmissions {
   private static async prepareAndUpdateDraft(
     draft: OfflineSubmission
   ): Promise<void> {
-    const url = `${WEB_BASE_URL}/draft/${draft.serverDraftId}`;
-    const payload = {
-      data: draft.data,
-      formId: draft.formId
-    };
-    await RequestService.httpPUTRequest(url, payload);
-    await this.deleteLocalSubmissions(draft);
+    try {
+      const url = `${WEB_BASE_URL}/draft/${draft.serverDraftId}`;
+      const payload = {
+        data: draft.data,
+        formId: draft.formId
+      };
+      await RequestService.httpPUTRequest(url, payload);
+      await this.deleteLocalSubmissions(draft);
+      throw new Error("Request failed");
+    } catch (error) {
+      console.error("Error creating the submission:", error);
+    }
   }
 
   /**
@@ -162,7 +172,8 @@ class OfflineSubmissions {
       const response: FormioCreateResponse =
         await this.prepareAndSubmitFormioSubmission(data);
       await this.triggerApplicationCreate(response);
-      await this.deleteLocalSubmissions(data);
+      await this.deleteLocalSubmissions(data, true);
+      throw new Error("Request failed");
     } catch (error) {
       console.error("Error creating the submission:", error);
     }
@@ -175,25 +186,22 @@ class OfflineSubmissions {
   private static async prepareAndSubmitFormioSubmission(
     data: OfflineSubmission
   ): Promise<any> {
-    try {
-      const formioUrl = `${API_URL}/form/${data.formId}/submission`;
-      const formioPayload = {
-        data: data.data,
-        metadata: data.submissionData?.metadata,
-        state: data.submissionData?.state,
-        _vnote: data.submissionData?._vnote
-      };
-      const header = { "x-jwt-token": localStorage.getItem("formioToken") };
-      return RequestService.httpPOSTRequest(
-        formioUrl,
-        formioPayload,
-        null,
-        false,
-        header
-      );
-    } catch (error) {
-      console.error("Error creating the formio submission:", error);
-    }
+    const formioUrl = `${API_URL}/form/${data.formId}/submission`;
+    // const formioUrl = `${API_URL}/form/123/submission`;
+    const formioPayload = {
+      data: data.data,
+      metadata: data.submissionData?.metadata,
+      state: data.submissionData?.state,
+      _vnote: data.submissionData?._vnote
+    };
+    const header = { "x-jwt-token": localStorage.getItem("formioToken") };
+    return RequestService.httpPOSTRequest(
+      formioUrl,
+      formioPayload,
+      null,
+      false,
+      header
+    );
   }
 
   /**
@@ -203,16 +211,12 @@ class OfflineSubmissions {
   private static async triggerApplicationCreate(
     data: FormioCreateResponse
   ): Promise<void> {
-    try {
-      // Process and transform the data.
-      const submissionData = this.prepareApplicationPayload(data);
-      // API URL
-      const URL = `${WEB_BASE_URL}/application/create`;
-      // Calling the API
-      await RequestService.httpPOSTRequest(URL, submissionData);
-    } catch (error) {
-      console.error("Error creating the submission:", error);
-    }
+    // Process and transform the data.
+    const submissionData = this.prepareApplicationPayload(data);
+    // API URL
+    const URL = `${WEB_BASE_URL}/application/create`;
+    // Calling the API
+    await RequestService.httpPOSTRequest(URL, submissionData);
   }
 
   /**
@@ -244,7 +248,8 @@ class OfflineSubmissions {
       const response: FormioCreateResponse =
         await this.prepareAndSubmitFormioSubmission(data);
       await this.triggerApplicationUpdate(response, data?.serverDraftId);
-      await this.deleteLocalSubmissions(data);
+      await this.deleteLocalSubmissions(data, true);
+      throw new Error("Request failed");
     } catch (error) {
       console.error("Error creating and updating the submission:", error);
     }
@@ -259,16 +264,12 @@ class OfflineSubmissions {
     data: FormioCreateResponse,
     draft_id: number | string
   ): Promise<void> {
-    try {
-      // Process and transform the data.
-      const submissionData = this.prepareApplicationPayload(data);
-      // API URL
-      const URL = `${WEB_BASE_URL}/draft/${draft_id}/submit`;
-      // Calling the API
-      await RequestService.httpPUTRequest(URL, submissionData);
-    } catch (error) {
-      console.error("Error creating the submission:", error);
-    }
+    // Process and transform the data.
+    const submissionData = this.prepareApplicationPayload(data);
+    // API URL
+    const URL = `${WEB_BASE_URL}/draft/${draft_id}/submit`;
+    // Calling the API
+    await RequestService.httpPUTRequest(URL, submissionData);
   }
 
   /**
@@ -276,12 +277,15 @@ class OfflineSubmissions {
    * @param submissions offline submissions that need to be deleted after the process.
    */
   private static async deleteLocalSubmissions(
-    submission: OfflineSubmission
+    submission: OfflineSubmission,
+    deleteApplications = false
   ): Promise<void> {
     await OfflineDeleteService.deleteOfflineSubmission(submission._id);
-    await OfflineDeleteService.deleteApplicationWithLocalSubmissionId(
-      submission.localSubmissionId
-    );
+    if (deleteApplications) {
+      await OfflineDeleteService.deleteApplicationWithLocalSubmissionId(
+        submission.localSubmissionId
+      );
+    }
   }
 
   /**
