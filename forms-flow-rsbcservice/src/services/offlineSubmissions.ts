@@ -26,7 +26,6 @@ class OfflineSubmissions {
     try {
       // Call token refresh.
       const tenantId = localStorage.getItem("tenantKey") ?? "";
-      console.log(tenantId, "_tenantId");
       let instance = KeycloakService.getInstance(
         KEYCLOAK_URL_AUTH,
         KEYCLOAK_URL_REALM,
