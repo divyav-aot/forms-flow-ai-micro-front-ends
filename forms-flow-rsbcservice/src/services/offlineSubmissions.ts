@@ -16,16 +16,16 @@ import {
   FormioCreateResponse,
   RequestCreateFormat
 } from "./offlineSubmissions.interface";
+import PubSub from "pubsub-js";
 
 class OfflineSubmissions {
   /**
    * Process offline submissions by fetching, processing drafts and submissions,
    * and deleting local submissions after the processes complete.
    */
-  public static async processOfflineSubmissions(): Promise<void> {
+  public static async processOfflineSubmissions(): Promise<any> {
     try {
       // Call token refresh.
-      const tenantId = localStorage.getItem("tenantKey") ?? "";
       let instance = KeycloakService.getInstance(
         KEYCLOAK_URL_AUTH,
         KEYCLOAK_URL_REALM,
@@ -48,13 +48,16 @@ class OfflineSubmissions {
       const processSubmissionPromise = this.processSubmission(submissions);
       const deleteDraftPromise = this.processDraftDelete();
       // Wait for both processes to finish
-      await Promise.all([
+
+      PubSub.publish("DRAFT_ENABLED_SYNC_COMPLETED", { status: "completed" });
+      return Promise.all([
         processDraftsPromise,
         processSubmissionPromise,
         deleteDraftPromise
       ]);
     } catch (error) {
       console.error("Error processing drafts or submissions:", error);
+      PubSub.publish("DRAFT_ENABLED_SYNC_COMPLETED", { status: "incompleted" });
     }
   }
 
@@ -140,6 +143,9 @@ class OfflineSubmissions {
       throw new Error("Request failed");
     } catch (error) {
       console.error("Error creating the submission:", error);
+      PubSub.publish("DRAFT_ENABLED_SYNC_COMPLETED", {
+        status: "draftCreateError"
+      });
     }
   }
 
@@ -161,6 +167,9 @@ class OfflineSubmissions {
       throw new Error("Request failed");
     } catch (error) {
       console.error("Error creating the submission:", error);
+      PubSub.publish("DRAFT_ENABLED_SYNC_COMPLETED", {
+        status: "draftUpdateError"
+      });
     }
   }
 
@@ -211,6 +220,9 @@ class OfflineSubmissions {
       throw new Error("Request failed");
     } catch (error) {
       console.error("Error creating the submission:", error);
+      PubSub.publish("DRAFT_ENABLED_SYNC_COMPLETED", {
+        status: "submitCreateError"
+      });
     }
   }
 
@@ -286,6 +298,9 @@ class OfflineSubmissions {
       throw new Error("Request failed");
     } catch (error) {
       console.error("Error creating and updating the submission:", error);
+      PubSub.publish("DRAFT_ENABLED_SYNC_COMPLETED", {
+        status: "submitUpdateError"
+      });
     }
   }
 
@@ -358,6 +373,18 @@ class OfflineSubmissions {
       data: submissionData
     };
     return requestFormat;
+  }
+
+  /**
+   *  Function to check if there is any value in the offline submissions table.
+   */
+  public static async anyOfflineSubmissions(): Promise<boolean> {
+    try {
+      // Fetch all non-active offline submissions
+      return OfflineFetchService.anyOfflineSubmissions();
+    } catch (error) {
+      console.error("Error processing drafts or submissions:", error);
+    }
   }
 }
 export default OfflineSubmissions;
