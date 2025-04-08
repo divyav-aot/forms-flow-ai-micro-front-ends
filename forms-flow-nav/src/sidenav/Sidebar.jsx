@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
   APPLICATION_NAME,
   MULTITENANCY_ENABLED,
+  APP_BASE_ROUTE,
   ENABLE_FORMS_MODULE,
   ENABLE_PROCESSES_MODULE,
   ENABLE_DASHBOARDS_MODULE,
@@ -44,7 +45,7 @@ const Sidebar = React.memo(({ props, sidenavHeight="100%" }) => {
   const currentLocation = useLocation();
 
   // const [activeLink, setActiveLink] = useState("");
-  const baseUrl = MULTITENANCY_ENABLED ? `/tenant/${tenantKey}/` : "/";
+  const baseUrl = MULTITENANCY_ENABLED ? `/tenant/${tenantKey}/` : `${APP_BASE_ROUTE}/`;
   // const defaultLogoPath =
   //   document.documentElement.style.getPropertyValue("--navbar-logo-path") ||
   //   "/logo.svg";
@@ -187,7 +188,7 @@ const Sidebar = React.memo(({ props, sidenavHeight="100%" }) => {
     
     const activeSection =
     sections.find((section) =>
-      section.supportedRoutes.some((exp) => currentLocation.pathname.includes(exp))
+      section.supportedRoutes.some((exp) => currentLocation.pathname.endsWith(exp))
     ) || { key: "0" }; // Default to key "0" if no match
   
     setActiveKey(activeSection.key);
