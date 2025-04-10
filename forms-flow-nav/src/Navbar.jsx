@@ -158,7 +158,7 @@ const isUserManager = userRoles?.includes("manage_users");
 
   const [loginUrl, setLoginUrl] = useState(baseUrl);
 
-  const logoPath = MULTITENANCY_ENABLED ? tenantLogo : defaultLogoPath;
+  const logoPath = MULTITENANCY_ENABLED ? tenantLogo : APP_BASE_ROUTE + defaultLogoPath;
   
 
   const getAppName = useMemo(
