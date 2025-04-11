@@ -376,41 +376,9 @@ class OfflineFetchService {
     }
   }
 
-  /**
+    /**
    * Fetches form definitions from IndexedDB and transforms them into the required format.
    */
-  /*public static async fetchOfflineFormDefinitions(): Promise<{
-    forms: {
-      description: string;
-      formId: string;
-      formName: string;
-      formType: string;
-      id: string;
-      modified: string;
-      processKey: string;
-    }[];
-    limit: number;
-    pageNo: number;
-    totalCount: number;
-  }> {
-    try {
-      const forms = await this.getOriginalFormDefinitions();
-
-      // Get total count from the array length
-      const totalCount = forms.length;
-
-      // Transform and return the data
-      const finalData = DBServiceHelper.transformFormDefinitions(
-        forms,
-        totalCount
-      );
-      return finalData;
-    } catch (error) {
-      console.error("Error fetching and transforming form definitions:", error);
-      return { forms: [], limit: 5, pageNo: 1, totalCount: 0 };
-    }
-  }*/
-
     public static async fetchOfflineFormDefinitions(
       sortBy: "formName" | "modified" = "formName",
       orderBy: "asc" | "desc" = "asc"
