@@ -379,7 +379,7 @@ class OfflineFetchService {
   /**
    * Fetches form definitions from IndexedDB and transforms them into the required format.
    */
-  public static async fetchOfflineFormDefinitions(): Promise<{
+  /*public static async fetchOfflineFormDefinitions(): Promise<{
     forms: {
       description: string;
       formId: string;
@@ -409,7 +409,61 @@ class OfflineFetchService {
       console.error("Error fetching and transforming form definitions:", error);
       return { forms: [], limit: 5, pageNo: 1, totalCount: 0 };
     }
-  }
+  }*/
+
+    public static async fetchOfflineFormDefinitions(
+      sortBy: "formName" | "modified" = "formName",
+      orderBy: "asc" | "desc" = "asc"
+    ): Promise<{
+      forms: {
+        description: string;
+        formId: string;
+        formName: string;
+        formType: string;
+        id: string;
+        modified: string;
+        processKey: string;
+      }[];
+      pageNo: number;
+      totalCount: number;
+    }> {
+      try {
+        const forms = await this.getOriginalFormDefinitions();
+        const totalCount = forms.length;
+    
+        // Transform first
+        const transformed = DBServiceHelper.transformFormDefinitions(forms, totalCount);
+    
+        // Sort on transformed fields (formName or modified)
+        transformed.forms.sort((a, b) => {
+          const aVal = a[sortBy] ?? "";
+          const bVal = b[sortBy] ?? "";
+          const direction = orderBy === "asc" ? 1 : -1;
+    
+          if (typeof aVal === "string" && typeof bVal === "string") {
+            return direction * aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+          }
+    
+          if (
+            (typeof aVal === "string" || typeof aVal === "number") &&
+            (typeof bVal === "string" || typeof bVal === "number")
+          ) {
+            return direction * (new Date(aVal).getTime() - new Date(bVal).getTime());
+          }
+    
+          return 0;
+        });
+    
+        // Remove limit from return object
+        const { limit, ...finalResult } = transformed;
+        return finalResult;
+      } catch (error) {
+        console.error("Error fetching and transforming form definitions:", error);
+        return { forms: [], pageNo: 1, totalCount: 0 };
+      }
+    }
+    
+
 
   /**
    * Fetches a specific offline form by its ID from the formDefinition table.
