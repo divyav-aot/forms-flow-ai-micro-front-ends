@@ -1,25 +1,21 @@
 export const DATE_FORMAT =
-  ((window as any)._env_ && (window as any)._env_.REACT_APP_DATE_FORMAT) ||
-  "YYYY-MM-DD";
+  (window as any)._env_ && (window as any)._env_.REACT_APP_DATE_FORMAT || "YYYY-MM-DD";
 
 export const TIME_FORMAT =
-  ((window as any)._env_ && (window as any)._env_.REACT_APP_TIME_FORMAT) ||
-  "HH:mm:ss";
+(window as any)._env_ && (window as any)._env_.REACT_APP_TIME_FORMAT || "HH:mm:ss";
 
-const baseRoute =
-  (window as any)._env_ && (window as any)._env_.REACT_APP_BASE_ROUTE;
+const baseRoute = (window as any)._env_ && (window as any)._env_.REACT_APP_BASE_ROUTE;
 export const APP_BASE_ROUTE = baseRoute ? "/" + baseRoute : "";
 
-const MULTITENANCY_ENABLED_VARIABLE =
-  (window as any)._env_?.REACT_APP_MULTI_TENANCY_ENABLED || false;
+const MULTITENANCY_ENABLED_VARIABLE = (window as any)._env_?.REACT_APP_MULTI_TENANCY_ENABLED || false;
 
 export const MULTITENANCY_ENABLED =
   MULTITENANCY_ENABLED_VARIABLE === "true" ||
-  MULTITENANCY_ENABLED_VARIABLE === true;
+    MULTITENANCY_ENABLED_VARIABLE === true
 
 //application details
 export const APPLICATION_NAME =
-  (window as any)._env_?.REACT_APP_APPLICATION_NAME || "formsflow.ai";
+  (window as any)._env_?.REACT_APP_APPLICATION_NAME ?? "formsflow.ai";
 
 // Used in encyrpting and decrypting the token from local storage.
 export const TOKEN_ENCRYPTION_KEY = (window as any)._env_
