@@ -213,16 +213,25 @@ class KeycloakService {
 
 
     /**
-     * Refresh the jwt token before it gets expired.
-     */
+     * Starts a background polling mechanism to refresh the JWT token periodically before it expires.
+     *
+     * - Retrieves the JWT expiration interval from the environment/config (`FORMIO_JWT_EXPIRE`).
+     * - If the value is invalid or missing, falls back to a default (`DEFAULT_FORMIO_JWT_EXPIRE`).
+     * - Adds a small buffer (2 seconds) to ensure the token is refreshed slightly before actual expiration.
+     * - Clears any existing polling interval before starting a new one.
+     * - Sets up a `setInterval` that checks for online status and asynchronously refreshes the JWT token.
+     * - If `skipTimer` is true or the application is not `"roadsafety"`, the interval is set to 0 (executes immediately).
+     *
+     * @param skipTimer - If true, bypasses the default interval check (used for forced/immediate refresh).
+    */
     private static refreshJwtToken(skipTimer: boolean = false): void {
       const parsedValue = Number(FORMIO_JWT_EXPIRE);
       const jwtExpireMinutes = isNaN(parsedValue)
         ? DEFAULT_FORMIO_JWT_EXPIRE
         : parsedValue;
 
-      // Add 2 seconds buffer (2000 ms)
-      const checkInterval = jwtExpireMinutes * 60 * 1000 + 2000;
+      // 2 seconds buffer (2000 ms)
+      const checkInterval = jwtExpireMinutes * 60 * 1000 - 2000;
 
       this.clearPolling(); // Clear previous interval before starting new
 
@@ -239,7 +248,7 @@ class KeycloakService {
         !skipTimer && APPLICATION_NAME === "roadsafety" ? checkInterval : 0
       );
       console.log(
-        `JWT polling started with interval: ${checkInterval} ms (${jwtExpireMinutes} minutes + 2 seconds)`
+        `JWT polling started with interval: ${checkInterval} ms (${jwtExpireMinutes} minutes - 2 seconds)`
       );
     }
   
