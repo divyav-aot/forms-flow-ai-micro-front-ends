@@ -1,7 +1,7 @@
 import RequestService from "./requestService";
 import { API } from "../constants/constants";
 
-export const getJwtToken = async (): Promise<any> => {
+export const getUpdatedJwtToken = async (): Promise<any> => {
   try {
     const response = await RequestService.httpGETRequest(
       API.FORMIO_ROLES,
