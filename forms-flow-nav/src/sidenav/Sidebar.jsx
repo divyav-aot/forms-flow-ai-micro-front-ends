@@ -244,7 +244,6 @@ const Sidebar = React.memo(({ props, sidenavHeight="100%" }) => {
           className="logo-container"
           aria-label="Go to homepage"
         >
-
         {APPLICATION_NAME === "roadsafety" ? (
           <img
             width="160"
