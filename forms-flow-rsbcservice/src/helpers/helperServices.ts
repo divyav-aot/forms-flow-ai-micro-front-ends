@@ -350,3 +350,33 @@ export const printCheckHelper = (
   }
   return values[data.field_name] === data.field_val;
 };
+
+/**
+ * Convert a Base64 string to a Blob.
+ * @param base64
+ * @param mimeType
+ */
+export const convertBase64ToBlob = (base64, mimeType = "image/png") => {
+  const byteCharacters = atob(base64.split(",")[1]);
+  const byteNumbers = new Array(byteCharacters.length);
+
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+
+  const byteArray = new Uint8Array(byteNumbers);
+  return new Blob([byteArray], { type: mimeType });
+};
+
+/**
+ * Convert a Blob to a Base64 string
+ * @param blob
+ */
+export const convertBlobToBase64 = (blob) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+};

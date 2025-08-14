@@ -5,6 +5,7 @@ import OfflineEditService from "./storage/dbUpdateServices";
 import OfflineDeleteService from "./storage/dbDeleteServices";
 import RSBCImage from "./component/RSBCImage/RSBCImage";
 import OfflineSubmissions from "./services/offlineSubmissions";
+import {convertBase64ToBlob, convertBlobToBase64} from "./helpers/helperServices";
 
 export {
   OfflineFetchService,
@@ -12,5 +13,7 @@ export {
   OfflineEditService,
   OfflineDeleteService,
   RSBCImage,
-  OfflineSubmissions
+  OfflineSubmissions,
+  convertBase64ToBlob,
+  convertBlobToBase64
 };
