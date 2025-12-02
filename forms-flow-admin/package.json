@@ -69,8 +69,5 @@
   "overrides": {
     "underscore": ">=1.12.1"
   },
-  "overrides": {
-    "underscore": ">=1.12.1"
-  },
   "types": "dist/formsflow-admin.d.ts"
 }
