@@ -377,9 +377,12 @@ class OfflineFetchService {
   }
 
   /**
-   * Fetches form definitions from IndexedDB and transforms them into the required format.
-   */
-  public static async fetchOfflineFormDefinitions(): Promise<{
+ * Fetches form definitions from IndexedDB and transforms them into the required format.
+ */
+  public static async fetchOfflineFormDefinitions(
+    sortBy: "formName" | "modified" = "formName",
+    orderBy: "asc" | "desc" = "asc"
+  ): Promise<{
     forms: {
       description: string;
       formId: string;
@@ -389,27 +392,39 @@ class OfflineFetchService {
       modified: string;
       processKey: string;
     }[];
-    limit: number;
     pageNo: number;
     totalCount: number;
   }> {
     try {
       const forms = await this.getOriginalFormDefinitions();
-
-      // Get total count from the array length
       const totalCount = forms.length;
+      const transformed = DBServiceHelper.transformFormDefinitions(forms, totalCount);
 
-      // Transform and return the data
-      const finalData = DBServiceHelper.transformFormDefinitions(
-        forms,
-        totalCount
-      );
-      return finalData;
+      transformed.forms.sort((a, b) => {
+        const aVal = a[sortBy] ?? "";
+        const bVal = b[sortBy] ?? "";
+        const direction = orderBy === "asc" ? 1 : -1;
+
+        if (typeof aVal === "string" && typeof bVal === "string") {
+          return direction * aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+        }
+        if (
+          (typeof aVal === "string" || typeof aVal === "number") &&
+          (typeof bVal === "string" || typeof bVal === "number")
+        ) {
+          return direction * (new Date(aVal).getTime() - new Date(bVal).getTime());
+        }
+        return 0;
+      });
+      const { limit, ...finalResult } = transformed;
+      return finalResult;
     } catch (error) {
       console.error("Error fetching and transforming form definitions:", error);
-      return { forms: [], limit: 5, pageNo: 1, totalCount: 0 };
+      return { forms: [], pageNo: 1, totalCount: 0 };
     }
   }
+
+
 
   /**
    * Fetches a specific offline form by its ID from the formDefinition table.
